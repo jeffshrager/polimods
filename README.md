@@ -1,192 +1,162 @@
-# Adaptive Two-Party Competition with Voter Productions
+# Adaptive Two-Party Competition
 
-A NetLogo model of repeated electoral competition between two adaptive political parties. The model now supports two alternative voter decision architectures:
+A heavily commented NetLogo teaching model of repeated electoral competition between two adaptive political parties.
 
-1. an original continuous weighted-choice equation; and
-2. an explicit production system in which every voter executes the same switchable IF-THEN rules.
+The model asks a deliberately narrow question:
 
-The model asks:
+> Can two parties that adjust their positions after elections generate persistent electoral parity, and under what conditions does that parity disappear?
 
-> Can two adaptive parties generate persistent electoral parity, and how does that outcome change when voters are represented as rule-following agents rather than as weighted utility calculations?
-
-Each tick represents one election. Voters choose a party and decide whether to participate; parties respond to the result; partisan identity and voter ideology may then change before the next election.
-
-## Files
-
-- `adaptive_two_party_model_production_rules.nlogo` — streamlined working model.
-- `adaptive_two_party_model_production_rules_commented.nlogo` — heavily commented teaching and development version with identical Interface settings and behavior.
-
-Both files are saved in NetLogo 6.4.0 format.
+Each tick represents one election. Individual voters decide whether to vote and which party to support; parties then adapt to the result; partisan identity and voter ideology may evolve before the next election.
 
 ## Requirements
 
 - [NetLogo 6.4.0](https://ccl.northwestern.edu/netlogo/)
+- Model file: `adaptive_two_party_model_commented.nlogo`
 
-Later NetLogo 6.x releases may also work, but have not been verified here.
+The model may work in later NetLogo 6.x releases, but it was saved with NetLogo 6.4.0.
 
 ## Quick start
 
-1. Open either model file in NetLogo.
-2. Click **SETUP**.
-3. Leave `production-system?` on to use the rule-based voters, or turn it off to use the original weighted equation.
-4. Click **ONE ELECTION** to advance once, or **GO** to run continuously.
-5. Turn individual `rule-...?` switches on or off to perform rule-ablation experiments.
-6. Inspect a voter after an election to view its reason counts and `rule-trace`.
-7. Use **EXPORT HISTORY (TSV)** to save election-level outcomes.
+1. Open `adaptive_two_party_model_commented.nlogo` in NetLogo.
+2. Click **SETUP** to create the electorate, parties, and optional social network.
+3. Click **ONE ELECTION** to advance one election at a time, or **GO** to run continuously.
+4. Watch the vote-share, party-position, margin, turnout, and ideology-distribution plots.
+5. Use **EXPORT HISTORY (TSV)** to save election-level results.
+
+For an initial controlled experiment, turn the social network off and set `identity-reinforcement`, `opinion-drift`, and `winner-base-adaptation` to zero. Compare a fixed-party condition (`party-adaptation = 0`) with several positive adaptation values.
 
 ## Central modeling distinction
 
 Voters and parties have an **internal political state**. Their positions in the NetLogo world only display that state.
 
-- A voter’s horizontal screen position represents its internal `ideology`.
+- A voter’s horizontal screen position represents its internal `ideology` value.
 - A voter’s vertical position is arbitrary visual jitter.
 - Party stars display `blue-position` and `red-position`.
-- Social effects follow explicit network links.
+- Social influence follows explicit network links.
 
-Voting, rule firing, and party adaptation never use `xcor`, `ycor`, turtle distance, patch location, or spatial neighborhoods. The screen is a graph of the model, not its causal political space.
+Voting and party adaptation never use `xcor`, `ycor`, turtle distance, patch location, or spatial neighborhoods. The screen is therefore a graph of the model, not the model’s causal political space.
 
 ## Agents and state
 
 The model contains:
 
-- **Voters**, each with ideology, partisan identity, vote history, turnout state, and production-system working memory.
+- **Voters**, each with ideology, partisan identity, turnout probability, vote choice, and vote history.
 - **Two parties**, Blue and Red, displayed as star-shaped turtles.
-- **Undirected social links**, through which previous votes can trigger a neighbor rule and ideologies can converge.
+- **Undirected social links**, through which voter ideology may be influenced.
 
-Ideology and party positions lie on a one-dimensional scale from `-1` to `+1`. Blue is constrained to remain to the left of Red, with a minimum gap of `0.02`.
-
-### Voter working memory
-
-During each production-system election, every voter resets and fills:
-
-| Variable | Meaning |
-|---|---|
-| `blue-reasons` | Number of fired productions favoring Blue |
-| `red-reasons` | Number of fired productions favoring Red |
-| `turnout-reasons` | Number of fired productions encouraging participation |
-| `abstention-reasons` | Number of fired productions discouraging participation |
-| `intended-choice` | Party selected before the turnout draw (`-1` or `+1`) |
-| `rule-trace` | Readable record of productions that fired |
-
-A trace might look like:
-
-```text
-policy->Blue; identity->Blue; strong-identity->turnout;
-```
+Political ideology and party positions lie on a one-dimensional scale from `-1` to `+1`. Blue is constrained to remain to the left of Red, with a minimum gap of `0.02`.
 
 ## Election cycle
 
-Every call to `go`:
+Every call to `go` performs the following sequence:
 
-1. reconciles the social network with the current switches;
-2. runs either the production system or weighted voter model;
-3. counts votes and determines the winner;
-4. adapts the losing party and optionally the winner;
-5. reinforces partisan identity among voters;
-6. updates ideology through peers and random drift;
-7. updates statistics, plots, display positions, and history; and
-8. advances the tick counter.
+1. Bring the social network into consistency with the current interface settings.
+2. Compute each voter’s party preference.
+3. Compute turnout probabilities and draw participation.
+4. Count votes and determine the winner.
+5. Adapt the losing party and, optionally, the winner.
+6. Reinforce the partisan identity of participating voters.
+7. Update ideology through peer influence and random drift.
+8. Update summary statistics, plots, display positions, and history.
+9. Advance the tick counter.
 
 The order is theoretically meaningful: parties respond to the electorate that just voted, and voters change before the following election.
 
-## Selecting the voter architecture
+## Voter choice
 
-### Production system
-
-Turn `production-system?` on. Each voter executes the same enabled rules. The rules are independent `if` statements rather than an exclusive `ifelse` chain, so several can fire simultaneously.
-
-Rules add discrete reasons. They do not contribute continuously weighted values. After all rules fire:
+In the non-rule-based decision model, each voter calculates a continuous `choice-score`:
 
 ```text
-choice-score = red-reasons - blue-reasons
+choice-score =
+    |ideology - blue-position|
+  - |ideology - red-position|
+  + identity-strength * party-identity
+  + election shock
 ```
 
-- A negative result produces an intended Blue vote.
-- A positive result produces an intended Red vote.
-- An exact tie is resolved stochastically and stored as `-0.001` or `+0.001`.
+Equivalently, for voter \(i\):
 
-Turnout is:
+\[
+C_i = |I_i-B|-|I_i-R|+sP_i+\epsilon_i
+\]
+
+where:
+
+- \(I_i\) is the voter’s ideology;
+- \(B\) and \(R\) are the Blue and Red party positions;
+- \(P_i\) is the voter’s partisan identity, from `-1` to `+1`;
+- \(s\) is `identity-strength`; and
+- \(\epsilon_i\) is a normally distributed election shock with standard deviation `election-noise`.
+
+The first term compares the voter’s distance from the two parties:
+
+\[
+|I_i-B|-|I_i-R|
+\]
+
+A voter who is closer to Red has a larger distance from Blue than from Red, so this term is positive. A voter who is closer to Blue has a negative value. Consequently:
+
+- a negative `choice-score` favors Blue;
+- a positive `choice-score` favors Red.
+
+For example, suppose a voter has ideology `0.2`, while Blue is at `-0.5` and Red is at `0.5`. The policy-distance contribution is:
+
+\[
+|0.2-(-0.5)|-|0.2-0.5|=0.7-0.3=0.4
+\]
+
+Policy proximity therefore contributes `+0.4`, favoring Red. If the same voter has a mildly Blue partisan identity of `-0.3` and `identity-strength = 0.6`, identity contributes:
+
+\[
+0.6(-0.3)=-0.18
+\]
+
+Before election noise, the total score is:
+
+\[
+0.4-0.18=0.22
+\]
+
+The voter therefore intends to vote Red, although the voter’s Blue identity weakens that preference. The random election shock may occasionally reverse the result.
+
+The intended party is selected from the sign of the score:
+
+```netlogo
+ifelse choice-score < 0
+  [ set intended-choice -1 ]
+  [ set intended-choice 1 ]
+```
+
+Blue is coded as `-1` and Red as `+1`. An exact zero is therefore assigned to Red, although exact zeros are rare when `election-noise` is positive.
+
+Turnout is decided separately. The probability of voting is:
 
 ```text
-base-turnout
-+ turnout-sensitivity * (turnout-reasons - abstention-reasons)
+base-turnout + turnout-sensitivity * abs(choice-score)
 ```
 
-The result is clipped to `[0, 1]`, after which turnout is drawn probabilistically.
+or:
 
-### Original weighted model
+\[
+T_i = \operatorname{clip}\left(b+t|C_i|,0,1\right)
+\]
 
-Turn `production-system?` off. Party preference is then computed as:
+where \(b\) is `base-turnout` and \(t\) is `turnout-sensitivity`. The result is clipped to the interval `[0, 1]`, and the model makes a random draw against that probability.
 
-```text
-|ideology - blue-position|
-- |ideology - red-position|
-+ identity-strength * party-identity
-+ election noise
-```
+Thus, the sign of `choice-score` determines **which party** the voter prefers, while its absolute magnitude represents **strength of preference** and increases the probability of turnout. Strongly Blue and strongly Red voters are therefore both more likely to participate than nearly indifferent voters.
 
-Negative values favor Blue and positive values favor Red. Turnout rises continuously with the absolute magnitude of this score.
-
-The rest of the model—party adaptation, identity reinforcement, opinion updating, plots, and export—is shared between the two architectures.
-
-## Preliminary production rules
-
-The thresholds are currently constants grouped near the top of `run-production-system`. The rule switches are on by default.
-
-| Switch | IF condition | THEN action | Threshold |
-|---|---|---|---:|
-| `rule-policy?` | One party is substantially closer than the other | Add one party reason | Policy advantage exceeds `0.15` in magnitude |
-| `rule-identity?` | Effective partisan identity is sufficiently strong | Add one party reason | Effective identity reaches `±0.25` |
-| `rule-habit?` | The voter has a previous non-abstaining vote | Add one reason for the previously chosen party | None |
-| `rule-neighbors?` | A clear majority of active linked neighbors previously chose one party | Add one party reason | At least `60%` |
-| `rule-engagement?` | Policy preference or effective identity is strong | Add a turnout reason for each activated condition | Policy `0.35`; identity `0.60` |
-| `rule-indifference?` | The parties are nearly equally attractive on policy | Add one abstention reason | Difference no greater than `0.15` |
-| `rule-alienation?` | Even the closer party is far away | Add one abstention reason | Nearest distance at least `0.55` |
-| `rule-cross-pressure?` | Policy and identity clearly favor opposite parties | Add one abstention reason | Uses policy and identity thresholds above |
-
-### Identity strength in the production model
-
-`identity-strength` is retained in both architectures, but its role differs:
-
-- In the weighted model it continuously scales identity’s contribution to `choice-score`.
-- In the production system it scales `party-identity` before threshold comparison, determining whether identity productions activate.
-
-### Independent cross-pressure rule
-
-`rule-cross-pressure?` evaluates the underlying policy and identity directions directly. It can therefore fire even when `rule-policy?` or `rule-identity?` is off. Turning those party-choice rules off removes their reasons; it does not make the voter incapable of being cross-pressured.
-
-### Neighbor rule versus opinion influence
-
-The model contains two distinct social mechanisms:
-
-- `rule-neighbors?` uses linked neighbors’ **previous votes** to add a current party reason.
-- `social-influence` moves the voter’s **ideology** toward linked neighbors’ mean ideology after the election.
-
-Enabling both means the network affects voting directly and also changes the state on which future voting depends.
-
-## Important interaction with party adaptation
-
-The losing party identifies “persuadable” opposing voters with:
-
-```text
-abs(choice-score) <= persuadable-band
-```
-
-The meaning differs across voter architectures:
-
-- Under the weighted model, `choice-score` is continuous, so `persuadable-band` selects a conventional interval of weak preferences around zero.
-- Under the production system, `choice-score` is normally an integer reason-count difference. With the default `persuadable-band = 0.25`, a one-reason advantage is outside the band; essentially only exact reason ties, stored as `±0.001`, count as persuadable.
-
-Set `persuadable-band` to at least `1` to include voters whose decision was made by a one-reason margin. This is not merely a scaling detail: it changes which voters the losing party treats as electorally reachable.
+In summary, the non-rule-based model combines policy proximity, partisan identity, and an election-specific random influence into one numerical preference; chooses the party favored by the sign of that value; and then uses the strength of the preference to determine turnout probability.
 
 ## Party adaptation
 
 ### Losing party
 
-The losing party combines two targets:
+The losing party combines two possible targets:
 
-- **Electoral target:** mean ideology of opposing voters satisfying the persuadable criterion.
-- **Base target:** mean ideology of voters who supported the losing party.
+- **Electoral target:** the mean ideology of opposing voters whose absolute choice score is no greater than `persuadable-band`—voters the party narrowly failed to win.
+- **Base target:** the mean ideology of voters who supported the losing party.
+
+The combined target is:
 
 ```text
 target =
@@ -194,19 +164,19 @@ target =
   + base-pressure * base-target
 ```
 
-The loser closes a fraction `party-adaptation` of the distance to this target.
+The party then closes a fraction `party-adaptation` of the remaining distance to that target.
 
-At `base-pressure = 0`, it responds entirely to persuadable opponents. At `base-pressure = 1`, it responds entirely to its current supporters.
+At `base-pressure = 0`, the loser responds entirely to narrowly lost opposing voters. At `base-pressure = 1`, it responds entirely to its current supporters.
 
 ### Winning party
 
-The winner may move toward the mean ideology of its supporters. `winner-base-adaptation` controls the fraction of the remaining distance moved. At zero, only the loser adapts.
+The winning party may move toward the mean ideology of its own supporters. `winner-base-adaptation` controls the fraction of the remaining distance moved. At zero, only the losing party adapts.
 
-Turning `adaptive-parties?` off freezes party positions after setup.
+Setting `adaptive-parties?` to off freezes both party positions after setup.
 
 ## Partisan identity
 
-After voting, `party-identity` moves toward the chosen party:
+After casting a ballot, a voter’s `party-identity` moves toward the chosen party:
 
 ```text
 new identity =
@@ -214,23 +184,23 @@ new identity =
   + identity-reinforcement * vote choice
 ```
 
-Blue is `-1`; Red is `+1`. Repeated voting can therefore create path dependence. Abstention causes no reinforcement and does not erase the voter’s previous non-abstaining vote.
+Blue is coded as `-1` and Red as `+1`. This creates path dependence: repeated support for a party can make future support more likely even when ideology remains unchanged. Abstention produces no identity reinforcement and does not erase the voter’s previous non-abstaining vote.
 
 ## Social network and opinion change
 
-When `social-network?` is on, the model constructs an undirected network with approximate mean degree `network-degree`.
+When `social-network?` is on, the model constructs an undirected voter network with an approximate average degree set by `network-degree`.
 
 `homophily` governs link acceptance:
 
-- `0`: ideological similarity has no effect;
-- `1`: acceptance declines linearly with ideological distance;
-- intermediate values blend random connection and similarity-based connection.
+- `0`: ideological similarity does not affect link formation.
+- `1`: acceptance declines linearly with ideological distance.
+- Intermediate values blend random connection and similarity-based connection.
 
-The network persists between elections. After changing `network-degree` or `homophily`, click **REBUILD NETWORK**.
+The network persists between elections. After changing `network-degree` or `homophily`, click **REBUILD NETWORK** to replace the existing links.
 
-After each election, each voter moves a fraction `social-influence` toward linked neighbors’ mean ideology and receives normal random movement with standard deviation `opinion-drift`.
+After each election, each voter moves a fraction `social-influence` toward the mean ideology of linked neighbors, then receives normally distributed random movement with standard deviation `opinion-drift`.
 
-Opinion updating is synchronous: all voters calculate `next-ideology` from the old state before any voter adopts a new value.
+Opinion updating is synchronous: all voters calculate `next-ideology` from the old state before any voter adopts its new value. This prevents NetLogo’s agent execution order from becoming an unintended causal mechanism.
 
 ## Interface parameters
 
@@ -238,48 +208,34 @@ Opinion updating is synchronous: all voters calculate `next-ideology` from the o
 
 | Parameter | Meaning | Default |
 |---|---|---:|
-| `electorate-shape` | One centered distribution or two ideological camps | `single-peaked` |
+| `electorate-shape` | One centered distribution (`single-peaked`) or two ideological camps (`two-camp`) | `single-peaked` |
 | `population` | Number of voter agents | `500` |
-| `ideology-spread` | Standard deviation within the electorate or each camp | `0.25` |
-| `electorate-polarization` | Absolute position of the two camp centers | `0.35` |
+| `ideology-spread` | Standard deviation within the ideological distribution or each camp | `0.25` |
+| `electorate-polarization` | Absolute location of the two camp centers | `0.35` |
 | `identity-noise` | Initial random mismatch between ideology and partisan identity | `0.35` |
 
-### Decision architecture and rules
-
-| Parameter | Meaning | Default |
-|---|---|---:|
-| `production-system?` | Selects production rules rather than the weighted equation | On |
-| `rule-policy?` | Enables policy-proximity reasons | On |
-| `rule-identity?` | Enables partisan-identity reasons | On |
-| `rule-habit?` | Enables previous-vote reasons | On |
-| `rule-neighbors?` | Enables linked-neighbor majority reasons | On |
-| `rule-engagement?` | Enables strong-preference turnout reasons | On |
-| `rule-indifference?` | Enables near-equality abstention reasons | On |
-| `rule-alienation?` | Enables distance-from-both abstention reasons | On |
-| `rule-cross-pressure?` | Enables policy/identity conflict abstention | On |
-
-With all production rules off, party choice is a stochastic tie-break and turnout remains `base-turnout`.
+`electorate-polarization` has no effect in the `single-peaked` condition.
 
 ### Party construction and adaptation
 
 | Parameter | Meaning | Default |
 |---|---|---:|
 | `initial-party-gap` | Initial distance between Blue and Red | `1.0` |
-| `adaptive-parties?` | Enables post-election party movement | On |
+| `adaptive-parties?` | Enables or disables post-election party movement | On |
 | `party-adaptation` | Fraction of the distance the loser moves toward its target | `0.25` |
-| `persuadable-band` | Maximum absolute `choice-score` for a narrowly lost opposing voter | `0.25` |
+| `persuadable-band` | Maximum absolute choice score for a narrowly lost opposing voter | `0.25` |
 | `base-pressure` | Weight assigned to current supporters in the loser’s target | `0.15` |
-| `winner-base-adaptation` | Fraction of the distance the winner moves toward supporters | `0.03` |
+| `winner-base-adaptation` | Fraction of the distance the winner moves toward its supporters | `0.03` |
 
-### Identity, turnout, and noise
+### Vote choice, identity, and turnout
 
 | Parameter | Meaning | Default |
 |---|---|---:|
-| `identity-strength` | Identity weight or threshold scaling, depending on architecture | `0.6` |
+| `identity-strength` | Weight of partisan identity in vote choice | `0.6` |
 | `identity-reinforcement` | Rate at which voting strengthens partisan identity | `0.03` |
-| `base-turnout` | Baseline participation probability | `0.55` |
-| `turnout-sensitivity` | Continuous preference effect or per-reason turnout step | `0.12` |
-| `election-noise` | Weighted-model shock and production tie-break source | `0.08` |
+| `base-turnout` | Baseline probability of participation | `0.55` |
+| `turnout-sensitivity` | Additional turnout associated with preference strength | `0.12` |
+| `election-noise` | Standard deviation of election-specific vote shocks | `0.08` |
 
 ### Network and opinion change
 
@@ -288,9 +244,9 @@ With all production rules off, party choice is a stochastic tie-break and turnou
 | `social-network?` | Enables network construction and influence | Off |
 | `network-degree` | Approximate average number of links per voter | `6` |
 | `homophily` | Strength of ideological similarity in link formation | `0.7` |
-| `social-influence` | Fraction moved toward neighbors’ mean ideology | `0.08` |
+| `social-influence` | Fraction of distance moved toward neighbors’ mean ideology | `0.08` |
 | `opinion-drift` | Standard deviation of random ideological change | `0.01` |
-| `show-links?` | Shows or hides links without changing effects | Off |
+| `show-links?` | Shows or hides links without changing their effects | Off |
 
 ## Controls
 
@@ -298,27 +254,34 @@ With all production rules off, party choice is a stochastic tie-break and turnou
 |---|---|
 | **SETUP** | Creates a new electorate, resets parties and statistics, and optionally builds a network |
 | **GO** | Runs elections continuously |
-| **ONE ELECTION** | Runs one complete election cycle |
-| **REBUILD NETWORK** | Replaces links using current network settings |
-| **RESET PARTY POSITIONS** | Restores the initial gap without recreating voters or links |
+| **ONE ELECTION** | Runs exactly one complete election cycle |
+| **REBUILD NETWORK** | Discards current links and builds a new network using current settings |
+| **RESET PARTY POSITIONS** | Restores the initial party gap without recreating voters or links |
 | **EXPORT HISTORY (TSV)** | Saves one tab-separated row per election |
 
 ## Outputs
 
-The Interface reports:
+The interface reports:
 
-- Blue and Red vote share among ballots cast;
-- turnout as a percentage of all voters;
-- absolute election margin;
-- running mean margin;
-- changes in party control;
-- Blue and Red policy positions;
-- party gap; and
-- switching among participating repeat voters.
+- Blue and Red vote share among ballots cast
+- turnout as a percentage of all voters
+- absolute election margin in percentage points
+- running mean election margin
+- number of changes in party control
+- Blue and Red policy positions
+- party gap
+- vote switching among participating repeat voters
 
-Plots show vote share, party positions, election margin and turnout, and the current ideology distribution.
+The plots show:
+
+- vote shares over time, including a 50% parity line
+- party positions over time
+- election margin and turnout
+- the current voter ideology distribution
 
 ### Export format
+
+`EXPORT HISTORY (TSV)` writes the following columns:
 
 ```text
 election
@@ -334,50 +297,90 @@ mean-ideology
 switch-rate
 ```
 
+The file includes a header row and one row for every completed election.
+
 ## Included BehaviorSpace experiments
 
-Two experiments are included under **Tools → BehaviorSpace**:
+Open **Tools → BehaviorSpace** to run the included experiments.
 
-- **Parity sweep — adaptation × base pressure**
-- **Network sweep — homophily × social influence**
+### Parity sweep — adaptation × base pressure
 
-Both explicitly set `production-system?` to false, preserving comparability with the original weighted-model experiments. New production-system experiments should add the master switch and desired rule-switch conditions explicitly.
+- 10 repetitions per condition
+- 100 elections per run
+- `party-adaptation`: `0.0` through `0.5` in increments of `0.1`
+- `base-pressure`: `0`, `0.25`, `0.5`, `0.75`, `1`
+- social network disabled
 
-## Suggested production-system experiments
+Recorded outcomes include mean margin, control-change rate, party gap, party positions, and turnout.
 
-### Rule ablation
+### Network sweep — homophily × social influence
 
-Run an all-rules baseline, then turn off one rule at a time. Compare vote share, turnout, switching, party-control changes, party gap, and mean margin.
+- 10 repetitions per condition
+- 100 elections per run
+- two-camp electorate
+- `homophily`: `0`, `0.25`, `0.5`, `0.75`, `1`
+- `social-influence`: `0`, `0.05`, `0.1`, `0.2`, `0.4`
 
-Particularly informative contrasts are:
+Recorded outcomes include mean margin, control-change rate, party gap, mean voter ideology, and vote switching.
 
-- policy versus identity;
-- habit on versus off over long runs;
-- indifference versus alienation;
-- cross-pressure with and without identity reinforcement; and
-- neighbor voting influence with and without ideological social influence.
+## Suggested experiments
 
-### Architecture comparison
+### Does adaptation generate parity?
 
-Use identical random seeds and parameters where possible, switching only `production-system?`. Remember that `persuadable-band` is not directly scale-equivalent across architectures.
+Disable social influence, identity reinforcement, opinion drift, and winner movement. Compare fixed parties with several levels of losing-party adaptation. Examine mean margin, control changes, and final party gap.
 
-### Rule interactions
+### Electoral responsiveness versus base pressure
 
-The rules are additive and nonexclusive. Test combinations rather than interpreting single-rule effects as independent. For example, habit and identity reinforcement can create a feedback loop, while neighbor voting and social influence can create two simultaneous network pathways.
+Sweep `base-pressure` from `0` to `1`. Test whether pursuit of narrowly lost voters produces convergence while responsiveness to existing supporters preserves or increases separation.
 
-## Important limitations
+### Partisan lock-in
 
-- The rules and thresholds are preliminary theoretical propositions, not fitted empirical estimates.
-- Every voter has the same productions; heterogeneity comes only from state and network position.
-- Party conflict resolution is a reason count, so all fired party reasons currently have equal strength.
-- Turnout effects occur in equal steps of `turnout-sensitivity`.
-- Tie-breaking remains stochastic.
-- The ideological space is one-dimensional.
-- The model has two parties, no incumbency, no districts, no primaries, and no changing external political environment.
-- Party adaptation uses actual voters and reason-score margins rather than strategic expectations or polling.
+Compare `identity-reinforcement = 0` with positive values. Examine whether early random outcomes reduce later switching and produce persistent electoral histories.
 
-The model is intended to test whether a small set of mechanisms can generate qualitative patterns, not to predict a particular election.
+### Network homophily and polarization
 
-## Extending the model
+Use a two-camp electorate and vary both `homophily` and `social-influence`. Rebuild the network for each structural condition and compare the ideology distribution with electoral margins.
 
-Natural next steps include exposing rule thresholds as sliders, assigning heterogeneous rule sets or priorities to voters, allowing rules to learn or change, adding rule-specific strengths, separating campaign and long-term social influence, revising the persuadable definition for reason-based voters, or fitting aggregate outcomes to historical election series.
+### Turnout and apparent parity
+
+Vary `turnout-sensitivity`. Close vote shares need not imply an evenly divided full electorate when participation depends on preference strength.
+
+## Interpreting results
+
+The model is not intended to prove why any particular real political system produces close elections. A defensible result should instead take the form:
+
+> Under this explicit set of assumptions, mechanism X is sufficient—or insufficient—to generate pattern Y over repeated simulations.
+
+Because setup, vote choice, turnout, link formation, and opinion drift are stochastic, conclusions should be based on repeated runs rather than a single visually interesting trajectory.
+
+## Limitations
+
+The model contains:
+
+- one ideological dimension
+- exactly two parties
+- no primaries or third parties
+- no districts or electoral institutions
+- no incumbency, campaign spending, candidate quality, or economic state
+- highly simplified party learning rules
+- information available to parties that real organizations may not possess
+
+These omissions define the scope of the experiment. Extensions are most informative when they introduce one new mechanism at a time while preserving a comparable baseline.
+
+## Possible extensions
+
+Potential additions include asymmetric party strategies, primary electorates, third parties, incumbency, issue salience, economic shocks, district-based elections, endogenous turnout campaigns, and comparison with historical two-party vote-share data.
+
+## Code organization
+
+The NetLogo source is organized into named procedures corresponding to the conceptual stages of the model:
+
+- `setup`, `setup-parties`, and `setup-voters`
+- `go` and `run-election`
+- `adapt-parties`, `move-losing-party`, and `move-winning-party`
+- `update-voter-states`
+- `build-network`
+- `update-summary-statistics` and `update-display`
+- `record-history` and `export-history`
+
+The source file is intentionally heavily commented so it can be read as a teaching text as well as executed as a model.
