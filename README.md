@@ -1,12 +1,170 @@
 # Adaptive Two-Party Competition
 
-A heavily commented NetLogo teaching model of repeated electoral competition between two adaptive political parties.
+A heavily commented NetLogo teaching model of repeated electoral competition between two adaptive political parties, with a Python port and a scriptable experiment runner.
 
 The model asks a deliberately narrow question:
 
 > Can two parties that adjust their positions after elections generate persistent electoral parity, and under what conditions does that parity disappear?
 
 Each tick represents one election. Individual voters decide whether to vote and which party to support; parties then adapt to the result; partisan identity and voter ideology may evolve before the next election.
+
+## Two implementations
+
+| | NetLogo | Python |
+|---|---|---|
+| Files | `adaptive_two_party_model*.nlogo` | `polimods/` |
+| Best for | reading, teaching, watching one run unfold | running thousands of runs and analyzing them |
+| Experiments | BehaviorSpace, through the GUI | `polimods.jig`, from a TOML spec |
+
+The two are the same model. The Python port reproduces every mechanism and both
+BehaviorSpace experiments; it does not reproduce the display layer, which the
+model never reads. Runs are not bit-identical across the two, because NetLogo and
+numpy use different random number generators — see
+[`docs/PORTING.md`](docs/PORTING.md) for the full mapping and the handful of
+behaviours worth knowing about before interpreting results.
+
+# Python
+
+## Install
+
+```bash
+pip install -e .            # requires Python 3.11+ and numpy
+pip install -e '.[dev]'     # adds pytest and matplotlib
+```
+
+## Run one model
+
+```bash
+python -m polimods --steps 100 --seed 1 --export history.tsv
+```
+
+Every interface parameter is a flag, and every switch has a `--no-` form:
+
+```bash
+python -m polimods --steps 100 --population 2000 --party-adaptation 0.4 \
+                   --electorate-shape two-camp --social-network
+python -m polimods --steps 100 --production-system --no-rule-habit
+```
+
+The TSV it writes has the same columns, rounding, and number formatting as
+NetLogo's **EXPORT HISTORY (TSV)** button.
+
+From Python:
+
+```python
+from polimods import Model, Params
+
+model = Model(Params(party_adaptation=0.4, social_network=True), seed=1).run(100)
+print(model.mean_margin, model.party_gap, model.control_change_rate)
+
+for record in model.history:
+    ...
+```
+
+`Params()` reproduces `adaptive_two_party_model.nlogo`;
+`Params.production_rules_defaults()` reproduces the production-rules interface.
+`Params.validate()` rejects any value the NetLogo sliders could not have
+produced, and every model validates its parameters on construction.
+
+## The experimental jig
+
+The jig is a scriptable replacement for BehaviorSpace. An experiment is a TOML
+file; running it fans out across processes, seeds every run deterministically,
+and writes a self-describing results folder.
+
+```bash
+python -m polimods.jig list                                    # specs and past results
+python -m polimods.jig run experiments/parity_sweep.toml --dry-run
+python -m polimods.jig run experiments/parity_sweep.toml --jobs 12
+python -m polimods.jig summarize results/parity_sweep
+python -m polimods.jig summarize results/parity_sweep --plot mean_margin
+```
+
+An experiment spec mirrors BehaviorSpace's vocabulary:
+
+```toml
+name = "parity_sweep"
+repetitions = 10                 # runs per condition
+steps = 100                      # elections per run (timeLimit)
+base_seed = 20260807
+metrics = ["mean_margin", "control_change_rate", "party_gap"]
+
+[constants]                      # held fixed
+social_network = false
+population = 500
+
+[sweep]                          # crossed with each other
+party_adaptation = { first = 0.0, step = 0.1, last = 0.5 }   # steppedValueSet
+base_pressure = [0.0, 0.25, 0.5, 0.75, 1.0]                  # enumeratedValueSet
+```
+
+Sweep values are validated against the NetLogo slider ranges before the first run
+starts, so a typo fails the experiment immediately rather than 200 runs in.
+
+Useful flags: `--jobs` (default: cores − 2), `--resume` (skip runs already in
+`runs.csv`), `--dry-run`, `--out`, `--quiet`.
+
+## Results layout
+
+Every experiment gets its own folder under `results/`:
+
+```
+results/
+  parity_sweep/
+    manifest.json     # what was run: every variable, its setting, its sweep range
+    runs.csv          # one row per run: condition + final metrics
+    steps.csv         # one row per election (only if run_metrics_every_step)
+```
+
+Re-running an experiment never overwrites an old folder — the runner suffixes the
+name (`parity_sweep_2`) and records the collision in the new manifest. Use
+`--resume` to continue into an existing folder instead.
+
+`manifest.json` describes **all** model variables, not only the swept ones, each
+tagged with the role it played:
+
+```json
+"party_adaptation": {
+  "role": "swept",
+  "sweep": { "first": 0.0, "step": 0.1, "last": 0.5 },
+  "values": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+  "bounds": [0.0, 1.0],
+  "netlogo_default": 0.25
+},
+"population":        { "role": "constant", "value": 500, "netlogo_default": 500 },
+"identity_strength": { "role": "default",  "value": 0.6, "netlogo_default": 0.6 }
+```
+
+`role` is `swept`, `constant` (pinned by the spec), or `default` (untouched). The
+manifest also records the git commit, base seed, run count, wall time, and
+library versions — enough to reconstruct the experiment from the folder alone.
+
+## Included experiments
+
+| Spec | Runs | Question |
+|---|---:|---|
+| `experiments/parity_sweep.toml` | 300 | Does losing-party adaptation generate parity, and does base pressure prevent it? |
+| `experiments/network_sweep.toml` | 250 | How do homophily and social influence interact in a two-camp electorate? |
+| `experiments/rule_ablation.toml` | 2560 | What does each of the eight production rules contribute? |
+
+The first two are ports of the BehaviorSpace experiments included in the
+`.nlogo` files. The third is new: the NetLogo ships the production system but no
+experiment that exercises it, because crossing eight switches by hand is not
+something anyone does 256 times.
+
+## Tests
+
+```bash
+pytest -q
+```
+
+The suite pins each formula against hand-computed values, tests every production
+rule at its threshold, and checks whole-model behaviour in regimes where the
+answer is known independently — a symmetric electorate cannot favour a party,
+turnout with no sensitivity term cannot leave its baseline, and a model with
+every stochastic channel closed cannot move at all.
+
+# NetLogo
 
 ## Requirements
 

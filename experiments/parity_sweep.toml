@@ -1,0 +1,36 @@
+# Parity sweep - adaptation x base pressure
+#
+# A port of the BehaviorSpace experiment of the same name in
+# adaptive_two_party_model_production_rules.nlogo.
+#
+# The question: does a losing party that adapts after each election produce
+# persistent electoral parity, and does chasing narrowly-lost opponents
+# (base_pressure = 0) differ from retreating to its own supporters
+# (base_pressure = 1)?
+#
+# The social network is off so that party adaptation is the only moving part.
+
+name = "parity_sweep"
+description = "Does losing-party adaptation generate parity, and does base pressure prevent it?"
+repetitions = 10
+steps = 100
+base_seed = 20260807
+
+metrics = [
+  "mean_margin",
+  "control_change_rate",
+  "party_gap",
+  "blue_position",
+  "red_position",
+  "turnout_rate",
+]
+
+[constants]
+social_network = false
+adaptive_parties = true
+production_system = false
+population = 500
+
+[sweep]
+party_adaptation = { first = 0.0, step = 0.1, last = 0.5 }
+base_pressure = [0.0, 0.25, 0.5, 0.75, 1.0]

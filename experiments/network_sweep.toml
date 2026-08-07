@@ -1,0 +1,46 @@
+# Network sweep - homophily x social influence
+#
+# A port of the BehaviorSpace experiment of the same name in
+# adaptive_two_party_model_production_rules.nlogo.
+#
+# The question: in a two-camp electorate, does who talks to whom (homophily)
+# interact with how much talking moves people (social_influence) to change the
+# ideological distribution and the electoral margin?
+#
+# Note that social_influence = 0 is included deliberately: with influence off,
+# homophily changes the network but can change nothing downstream, which makes
+# that row a built-in negative control on the rest of the sweep.
+
+name = "network_sweep"
+description = "Homophily x social influence in a two-camp electorate"
+repetitions = 10
+steps = 100
+base_seed = 20260807
+
+# The first five metrics are the ones the NetLogo experiment recorded.
+# ideology_sd is added because the others cannot see what this sweep manipulates:
+# both electorate shapes are symmetric, so mean_voter_ideology sits near zero
+# whatever social influence does, and switch_rate is a final-election snapshot
+# that has already locked to zero by roughly election 40. Spread is what actually
+# moves.
+metrics = [
+  "mean_margin",
+  "control_change_rate",
+  "party_gap",
+  "mean_voter_ideology",
+  "switch_rate",
+  "ideology_sd",
+  "mean_degree",
+]
+
+[constants]
+social_network = true
+adaptive_parties = true
+production_system = false
+electorate_shape = "two-camp"
+population = 500
+network_degree = 6
+
+[sweep]
+homophily = [0.0, 0.25, 0.5, 0.75, 1.0]
+social_influence = [0.0, 0.05, 0.1, 0.2, 0.4]

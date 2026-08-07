@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Per-election output can reach hundreds of MB and is regenerable from the
+# manifest.  manifest.json and runs.csv are committed: the manifest is the record
+# of what was run, and it is worth little without the results it describes.
+results/**/steps.csv
+results/**/*.png

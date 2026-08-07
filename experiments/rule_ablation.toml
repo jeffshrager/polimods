@@ -1,0 +1,51 @@
+# Rule ablation - full factorial over the eight production rules
+#
+# This experiment is new. The NetLogo file ships the voter production system but
+# no BehaviorSpace experiment that exercises it, because turning eight switches
+# on and off by hand is not something anyone does 256 times.
+#
+# Every rule is crossed with every other rule (2^8 = 256 conditions), so the
+# design measures each rule's main effect *and* its interactions, rather than only
+# the leave-one-out effect of removing it from the full set. The all-off corner is
+# included on purpose: with no rule firing, every voter is tie-broken, which makes
+# that condition a coin-flip control for the other 255.
+#
+# The social network is on, otherwise rule_neighbors could never fire and one of
+# the eight factors would be silently inert.
+#
+# Marginalize when reading the results, e.g.:
+#   python -m polimods.jig summarize results/rule_ablation --by rule_habit
+#   python -m polimods.jig summarize results/rule_ablation --by rule_policy rule_identity
+
+name = "rule_ablation"
+description = "Full factorial over the eight voter production rules"
+repetitions = 10
+steps = 100
+base_seed = 20260807
+
+metrics = [
+  "mean_margin",
+  "control_change_rate",
+  "party_gap",
+  "turnout_rate",
+  "switch_rate",
+  "mean_voter_ideology",
+]
+
+[constants]
+production_system = true
+social_network = true
+adaptive_parties = true
+electorate_shape = "two-camp"
+population = 500
+network_degree = 6
+
+[sweep]
+rule_policy = [true, false]
+rule_identity = [true, false]
+rule_habit = [true, false]
+rule_neighbors = [true, false]
+rule_engagement = [true, false]
+rule_indifference = [true, false]
+rule_alienation = [true, false]
+rule_cross_pressure = [true, false]
