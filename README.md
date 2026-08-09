@@ -1,6 +1,6 @@
 # Adaptive Two-Party Competition
 
-A heavily commented NetLogo teaching model of repeated electoral competition between two adaptive political parties, with a Python port and a scriptable experiment runner.
+A Python model of repeated electoral competition between two adaptive political parties, with a scriptable experiment runner.
 
 The model asks a deliberately narrow question:
 
@@ -8,20 +8,20 @@ The model asks a deliberately narrow question:
 
 Each tick represents one election. Individual voters decide whether to vote and which party to support; parties then adapt to the result; partisan identity and voter ideology may evolve before the next election.
 
-## Two implementations
+## Where the model lives
 
-| | NetLogo | Python |
-|---|---|---|
-| Files | `adaptive_two_party_model*.nlogo` | `polimods/` |
-| Best for | reading, teaching, watching one run unfold | running thousands of runs and analyzing them |
-| Experiments | BehaviorSpace, through the GUI | `polimods.jig`, from a TOML spec |
+`polimods/`, documented in the rest of this README, is the active implementation.
+It began as a translation of a NetLogo teaching model — `docs/PORTING.md` has the
+procedure-by-procedure mapping and the handful of behaviours worth knowing about
+before interpreting results — but that translation is a historical fact about how
+`polimods/` came to exist, not an ongoing constraint. The two are no longer
+maintained in parallel: the `.nlogo` files stay in the repo, documented below, as
+the original teaching text, and are not updated to track changes made in Python.
 
-The two are the same model. The Python port reproduces every mechanism and both
-BehaviorSpace experiments; it does not reproduce the display layer, which the
-model never reads. Runs are not bit-identical across the two, because NetLogo and
-numpy use different random number generators — see
-[`docs/PORTING.md`](docs/PORTING.md) for the full mapping and the handful of
-behaviours worth knowing about before interpreting results.
+A generalized model, `polimods/general/` (in progress, not yet on `main`), extends
+the base model to N parties, multi-dimensional ideology, pluggable decision rules,
+and electoral institutions. It carries no obligation to reproduce NetLogo, or even
+`polimods/`'s current behavior — see the session summaries for where it stands.
 
 # Python
 
@@ -280,18 +280,23 @@ answer is known independently — a symmetric electorate cannot favour a party,
 turnout with no sensitivity term cannot leave its baseline, and a model with
 every stochastic channel closed cannot move at all.
 
-# NetLogo
+# NetLogo (legacy, frozen)
+
+The original teaching model this project started from. It lives under `netlogo/`,
+stays fully tracked in git, and is documented in full below — but it is no longer
+updated to track changes made in Python; see
+[Where the model lives](#where-the-model-lives) above.
 
 ## Requirements
 
 - [NetLogo 6.4.0](https://ccl.northwestern.edu/netlogo/)
-- Model file: `adaptive_two_party_model_commented.nlogo`
+- Model file: `netlogo/adaptive_two_party_model_commented.nlogo`
 
 The model may work in later NetLogo 6.x releases, but it was saved with NetLogo 6.4.0.
 
 ## Quick start
 
-1. Open `adaptive_two_party_model_commented.nlogo` in NetLogo.
+1. Open `netlogo/adaptive_two_party_model_commented.nlogo` in NetLogo.
 2. Click **SETUP** to create the electorate, parties, and optional social network.
 3. Click **ONE ELECTION** to advance one election at a time, or **GO** to run continuously.
 4. Watch the vote-share, party-position, margin, turnout, and ideology-distribution plots.
