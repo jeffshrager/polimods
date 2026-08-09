@@ -15,3 +15,8 @@ venv/
 # results it describes.
 experiments/**/steps.csv
 experiments/**/*.png
+
+# Exception: figures a paper/ draft embeds are part of the delivered document,
+# not exploratory scan output, so they're committed alongside the prose that
+# cites them.
+!experiments/**/paper/*.png

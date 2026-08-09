@@ -125,6 +125,13 @@ twentieth of its unmoved-baseline separation. Whatever homophily contributes
 from here on is entirely a story about the shape and size of that small
 residual, not about polarization in the sense §4.1 used the word.
 
+![coalition_gap vs homophily, faceted by electorate_shape, one line per social_influence level. The influence=0 line sits far above every other line in both panels.](coalition_gap.png)
+
+*Figure 1. Final-election `coalition_gap` against `homophily`, one line per
+`social_influence`. The `influence = 0` line (top, blue) is the only one that
+isn't pinned near the bottom of the axis — visually, the entire figure is one
+flat high line and four flat low ones, in both electorate shapes.*
+
 ### 4.3 Within that residual, homophily's effect is 3–4× stronger in two-camp
 
 At `social_influence = 0.05` — the one influence level weak enough that the
@@ -145,6 +152,14 @@ Pooling across all five `social_influence` levels (`numpy.polyfit`, see
 +0.0008 in `single-peaked` versus +0.0083 in `two-camp` — a 10× difference —
 and the slope of `ideology_sd` is +0.0022 versus +0.0087, a 4× difference.
 
+![ideology_sd vs homophily, faceted by electorate_shape, one line per social_influence level. Same shape as Figure 1: one high flat line, four low ones.](ideology_sd.png)
+
+*Figure 2. Final-election `ideology_sd` against `homophily`, same faceting as
+Figure 1. `ideology_sd` cannot distinguish a unimodal electorate from two
+camps sitting close together (§3), but it shows the same qualitative pattern:
+one flat line far above the rest, then four lines clustered near the bottom
+where the residual homophily effect from Figure 1 lives.*
+
 At `social_influence >= 0.1`, `coalition_gap` has already collapsed to
 0.002–0.01 in both shapes, and the run-to-run standard deviation
 (`../analyses/condition_summary.csv`, `coalition_gap_sd`) is frequently as
@@ -153,13 +168,14 @@ levels is not distinguishable from noise with 10 repetitions; the finding
 above rests on `social_influence = 0.05`, the one setting where the signal is
 still visible above the floor.
 
-Full per-condition figures: `../ideology_sd.png`, `../coalition_gap.png`.
 Representative dynamics for the clearest single condition pair —
 `homophily = 1.0`, `social_influence = 0.05`, one per shape — are
 `../political_space_c21.png` (single-peaked) and `../political_space_c46.png`
-(two-camp): both show the two parties converging on the electorate's median by
-around election 20–30, with the losing party's own coalition centre (dashed
-line) trailing behind rather than leading the collapse.
+(two-camp), from `generic_analyses --all` (not reproduced here since PNGs
+outside `paper/` are regenerable scan output, not committed): both show the
+two parties converging on the electorate's median by around election 20–30,
+with the losing party's own coalition centre (dashed line) trailing behind
+rather than leading the collapse.
 
 ## 5. Discussion
 
