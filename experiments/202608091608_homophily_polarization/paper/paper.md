@@ -12,12 +12,19 @@ not separate two different claims: that homophily *deepens* a split that
 already exists, versus that homophily can *create* a split where none did. This
 experiment crosses `electorate_shape` (`single-peaked` vs `two-camp`) with
 `homophily` and `social_influence` — 500 runs, 50 conditions, 10 repetitions
-each — to test both at once. The result is one-sided: social influence, not
-homophily, does almost all of the work of separating or collapsing the two
-parties' coalitions, and homophily's own effect, where it is visible at all, is
-three to four times larger in the two-camp electorate than in the single-peaked
-one. Homophily sharpens; it does not, in this model and this parameter range,
-manufacture.
+each — to test both at once. The result is more one-sided than the original
+question anticipated. Actual polarization — coalition separation of 0.36
+(single-peaked) to 0.73 (two-camp) — exists in exactly one regime:
+`social_influence = 0`, regardless of `homophily`. The instant any social
+influence is switched on, even at its weakest tested value, coalition
+separation collapses to 5–6% of that magnitude and stays there; homophily
+never recovers more than a fraction of what was lost. Within that
+already-collapsed residual, homophily does have a measurable, shape-dependent
+effect — three to four times larger in the two-camp electorate than the
+single-peaked one — but calling this "polarization" at all overstates what
+it is. Homophily does not manufacture polarization, and in this parameter
+range it does not meaningfully sharpen it either: it modulates a residue
+roughly 15–20× smaller than the polarization it is nominally about.
 
 ## 1. Motivation
 
@@ -87,25 +94,43 @@ condition's 10 repetitions. See
 
 ## 4. Results
 
-### 4.1 The negative control holds
+### 4.1 Real polarization exists in exactly one condition: no social influence
 
-At `social_influence = 0`, `coalition_gap` is flat across the full `homophily`
-range in both shapes: 0.363 → 0.365 in `single-peaked` (+0.6%), 0.728 → 0.730
-in `two-camp` (+0.3%). Homophily with no influence channel does nothing, as
-expected — the sweep is measuring what it claims to.
+At `social_influence = 0`, `coalition_gap` sits at 0.363–0.365 in
+`single-peaked` and 0.728–0.730 in `two-camp`, flat across the entire
+`homophily` range (+0.6% and +0.3% respectively, end to end). This is not
+merely a negative control that happens to pass — it is where essentially all
+of the model's polarization lives. Every other cell in the sweep, at every
+`homophily` value, produces a `coalition_gap` at 5–6% of this magnitude or
+less (§4.2). If the question is "when does this model produce two
+ideologically separated partisan coalitions," the answer within this sweep is
+"only when nobody is listening to their neighbors" — not "when the network is
+homophilous."
 
-### 4.2 Social influence dominates; homophily modulates
+The flatness is not just observed, it is structural: `homophily` only enters
+the model through the neighbor-averaging term that `social_influence` scales.
+At `social_influence = 0` that term is uniformly zero regardless of who is
+linked to whom, so build_network's output cannot reach voter ideology at all.
+Homophily is causally inert in this cell by construction, not by coincidence.
 
-Turning `social_influence` on from 0 to 0.05 collapses `coalition_gap` by
-roughly 20–28× in both electorate shapes (0.363 → 0.015 single-peaked; 0.728 →
-0.027 two-camp). Whatever homophily does, it is a second-order effect next to
-this.
+### 4.2 Any social influence collapses coalition separation to a small residual
 
-### 4.3 Where homophily's effect is visible, it is 3–4× stronger in two-camp
+Turning `social_influence` on from 0 to 0.05 — the weakest nonzero value
+tested — collapses `coalition_gap` to 5.0% of its `social_influence = 0`
+value in `single-peaked` (0.367 → 0.018, at the most favorable, `homophily =
+1.0` setting) and 6.3% in `two-camp` (0.727 → 0.046, same setting). This
+happens at every `homophily` level, not just the best case: even the
+homophily-maximizing condition cannot pull the electorate back to more than a
+twentieth of its unmoved-baseline separation. Whatever homophily contributes
+from here on is entirely a story about the shape and size of that small
+residual, not about polarization in the sense §4.1 used the word.
+
+### 4.3 Within that residual, homophily's effect is 3–4× stronger in two-camp
 
 At `social_influence = 0.05` — the one influence level weak enough that the
-collapse hasn't already swamped the signal — `coalition_gap` rises with
-`homophily` in both shapes, but not by the same amount:
+residual is still resolvable above run-to-run noise — `coalition_gap` rises
+with `homophily` in both shapes, but not by the same amount. These are
+percentages of an already-collapsed value, not of true polarization:
 
 | electorate_shape | coalition_gap @ homophily=0 | coalition_gap @ homophily=1 | relative growth |
 |---|---:|---:|---:|
@@ -138,23 +163,38 @@ line) trailing behind rather than leading the collapse.
 
 ## 5. Discussion
 
-The manufacture hypothesis — that homophily alone can sort a single-peaked
-electorate into two ideologically distinct partisan camps — is not supported
-in this parameter range. Where an effect of homophily is visible at all, it
-runs three to four times weaker in `single-peaked` than in `two-camp`. The
-honest reading is closer to `network_sweep`'s original framing than to a new
-mechanism: homophily's role is to slow the *merging* of coalitions under
-social influence, and it does more of that slowing when there is a
-pre-existing bimodal structure for it to protect. Given a genuinely neutral
-starting distribution, it has much less to work with, and the electorate
-converges to a shared centre almost regardless of who is linked to whom.
+The dominant finding is not about homophily at all: in this model, polarized
+partisan coalitions are essentially a binary function of whether any social
+influence exists, not a dial that homophily and social_influence jointly
+turn. `social_influence = 0` produces large, stable separation regardless of
+network structure, because the network has no causal path to voter ideology
+without it (§4.1). `social_influence > 0`, at any tested level down to 0.05,
+erases 94–95% of that separation regardless of homophily (§4.2). The
+manufacture hypothesis — that homophily alone can sort a single-peaked
+electorate into two ideologically distinct partisan camps — is not just
+unsupported, it is close to structurally impossible in this design: homophily
+has no channel to act unless social influence is on, and the moment social
+influence is on, it overwhelms whatever homophily is doing by more than an
+order of magnitude.
 
-This refines rather than contradicts the earlier finding
-(`seshsums/202608071041_seshsum.md`): "homophily consistently slows [social
-influence's] collapse" turns out to depend on there being a collapse worth
-slowing. It is a sharpening/preserving mechanism, not a polarization-generating
-one, at least at `network_degree = 6` and the model's default coupling
-strengths.
+Inside the narrow band where homophily's effect is visible at all — the
+already-collapsed residual under weak social influence — it runs three to
+four times larger in `two-camp` than in `single-peaked` (§4.3). That
+difference is real and reproducible, but it is a difference between two small
+numbers, not a difference between polarized and unpolarized. The honest
+reading is closer to `network_sweep`'s original framing than to a new
+mechanism, once rescaled: homophily's role is to slow the *merging* of
+coalitions under social influence, and it does more of that slowing when
+there is a pre-existing bimodal structure for it to protect — but "slowing
+the merging" describes a change from 5.0% to 6.3% of true polarization, not a
+change in whether the electorate is polarized.
+
+This refines the earlier finding
+(`seshsums/202608071041_seshsum.md`) twice over: "homophily consistently
+slows [social influence's] collapse" turns out to depend on there being a
+collapse worth slowing, *and* the collapse itself turns out to be almost
+total the instant influence exists at all — homophily was never in a
+position to prevent it, only to leave a slightly larger residue behind.
 
 ## 6. Limitations
 
@@ -201,9 +241,16 @@ regenerable from them and are not.
 ## 8. Conclusion
 
 Crossing `electorate_shape` into the homophily × social-influence sweep
-answers the question `network_sweep` could not ask: homophily does not, on
-this evidence, manufacture polarization from a neutral electorate. It
-modestly slows the convergence social influence otherwise drives toward, and
-it does substantially more of that work when the electorate already has two
-camps to protect. The mechanism is real but asymmetric — a brake on merging,
-not an engine of sorting.
+answers the question `network_sweep` could not ask, and the answer is
+sharper than "homophily manufactures less than it sharpens." In this model,
+polarization is governed almost entirely by whether social influence exists
+at all — present, coalitions separate by 0.36–0.73 regardless of network
+structure; absent even at the weakest tested level, that separation
+collapses to 5–6% of itself regardless of network structure. Homophily's only
+demonstrated role is to leave a slightly larger residue behind within that
+already-collapsed regime, and it does three to four times more of that
+narrow work when the electorate starts with two camps to protect than when
+it starts with one. Homophily is not an engine of polarization in this model
+at any scale tested — it is, at most, a minor brake on an otherwise
+near-total convergence, and social influence, not network structure, decides
+whether there is anything left to brake.
