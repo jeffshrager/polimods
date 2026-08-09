@@ -192,6 +192,82 @@ experiment that exercises it, because crossing eight switches by hand is not
 something anyone does 256 times. The fourth is small and exists for its
 per-election output, which is what `generic_analyses/` draws.
 
+## Potential Experiments
+
+Ten sweeps the current model supports but the shipped specs don't run. Each is a
+starting point, not a finished design — pin down `repetitions`, `steps`, and
+`base_seed` before trusting a result.
+
+1. **Does the winner's own adaptation cancel the loser's?** Cross
+   `winner_base_adaptation` (0 to 0.5) with `party_adaptation`, `social_network`
+   off. `parity_sweep` fixes `winner_base_adaptation` at its default; this asks
+   whether a winner that also chases its supporters re-opens the gap the loser
+   was closing, and whether that depends on how fast the loser moves.
+
+2. **How persuadable is "narrowly lost"?** Sweep `persuadable_band` from 0.01 to
+   1.0 at `base_pressure = 0`, so the loser always chases opposing voters. A
+   narrow band means only near-ties count as persuadable and the party's target
+   is noisy from run to run; a wide band pulls in most of the opposing
+   electorate. Look at how `party_gap` variance across repetitions changes with
+   band width, not just its mean.
+
+3. **Identity reinforcement and lock-in.** Sweep `identity_reinforcement` from 0
+   to 0.25 at fixed `party_adaptation`, several `base_seed`s. Reinforcement
+   creates path dependence: an early, arbitrary run of wins for one party could
+   make that party's supporters harder to dislodge later. Compare the spread of
+   `control_change_rate` across seeds at each reinforcement level — a model with
+   no lock-in should show similar spread regardless.
+
+4. **Production rules against the weighted-choice model, head to head.** Run the
+   same `party_adaptation` x `base_pressure` grid as `parity_sweep` twice, once
+   with `production_system = false` and once `= true` (all rules on). The two
+   choice mechanisms are built to resemble each other in the middle of the
+   parameter space; the interesting question is where they diverge — likely at
+   the edges, where continuous weighting blends signals that discrete reason
+   counting can't.
+
+5. **Do the two abstention rules compound?** `rule_ablation` already crosses all
+   eight rules, but a focused 2x2 on `rule_alienation` x `rule_cross_pressure`
+   alone (other rules fixed on) isolates whether a voter who is both far from
+   both parties *and* cross-pressured abstains at a rate the two rules'
+   individual effects would not predict — i.e., whether abstention reasons
+   interact superadditively through `turnout_probability`'s linear formula.
+
+6. **Homophily's bite depends on electorate shape.** Cross `electorate_shape`
+   (`single-peaked` vs `two-camp`) with `homophily` and `social_influence`,
+   `social_network = true`. `network_sweep` only runs the two-camp case,
+   because homophily's effect on an already-bimodal electorate is the obvious
+   story; the single-peaked case tests whether homophily can *manufacture*
+   camps from a unimodal starting distribution given enough elections.
+
+7. **Opinion drift as a noise floor.** Fix `social_influence = 0` (no
+   persuasion) and sweep `opinion_drift` alone, two-camp electorate. This
+   isolates how much of any camp-separation decay seen elsewhere is just random
+   walk rather than social pull — a useful control to run before trusting a
+   network-influence result.
+
+8. **Does the starting gap matter once the dust settles?** Sweep
+   `initial_party_gap` (0.1 to 1.8) x `party_adaptation`. `enforce_party_order`
+   only stops the parties from crossing; nothing stops adaptation from
+   converging to different steady-state gaps depending on where the parties
+   started. Compare `party_gap` at `steps = 100` across starting gaps at each
+   adaptation level to see whether the initial condition is still visible that
+   far out.
+
+9. **Turnout sensitivity and apparent vs. actual parity.** Sweep
+   `turnout_sensitivity` from 0 to 0.5 with `production_system = true` (so
+   `rule_engagement`/`rule_indifference` are live). A close `blue_share`/
+   `red_share` among voters who turned out can coexist with a badly lopsided
+   `mean_voter_ideology` if turnout is selective enough — record both metrics
+   together rather than margin alone.
+
+10. **Is 100 elections long enough?** Take `parity_sweep`'s best
+    parity-producing corner and rerun it at `steps = 500` or `1000` with
+    `run_metrics_every_step = true`. Identity reinforcement and opinion drift
+    both accumulate slowly; a gap that looks stable at election 100 in
+    `steps.csv` may still be drifting, which only a longer run (viewed through
+    `generic_analyses`) would show.
+
 ## Tests
 
 ```bash
