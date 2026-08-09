@@ -1,0 +1,344 @@
+{
+  "experiment": "network_sweep",
+  "description": "Homophily x social influence in a two-camp electorate",
+  "spec_file": "experiments/202608071014_network_sweep/network_sweep.toml",
+  "created": "2026-08-07T17:14:49Z",
+  "completed": "2026-08-07T17:14:50Z",
+  "status": "complete",
+  "git_commit": "1fe9762",
+  "git_dirty": false,
+  "base_seed": 20260807,
+  "repetitions": 10,
+  "steps": 100,
+  "run_metrics_every_step": false,
+  "conditions": 25,
+  "total_runs": 250,
+  "runs_completed": 250,
+  "wall_seconds": 1.05,
+  "metrics": [
+    "mean_margin",
+    "control_change_rate",
+    "party_gap",
+    "mean_voter_ideology",
+    "switch_rate",
+    "ideology_sd",
+    "mean_degree"
+  ],
+  "sweep_variables": [
+    "homophily",
+    "social_influence"
+  ],
+  "variables": {
+    "electorate_shape": {
+      "role": "constant",
+      "type": "str",
+      "value": "two-camp",
+      "netlogo_default": "single-peaked"
+    },
+    "population": {
+      "role": "constant",
+      "type": "int",
+      "value": 500,
+      "bounds": [
+        50,
+        2000
+      ],
+      "slider_step": 50,
+      "netlogo_default": 500
+    },
+    "ideology_spread": {
+      "role": "default",
+      "type": "float",
+      "value": 0.25,
+      "bounds": [
+        0.02,
+        0.8
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.25
+    },
+    "electorate_polarization": {
+      "role": "default",
+      "type": "float",
+      "value": 0.35,
+      "bounds": [
+        0.0,
+        0.9
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.35
+    },
+    "identity_noise": {
+      "role": "default",
+      "type": "float",
+      "value": 0.35,
+      "bounds": [
+        0.0,
+        1.0
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.35
+    },
+    "initial_party_gap": {
+      "role": "default",
+      "type": "float",
+      "value": 1.0,
+      "bounds": [
+        0.1,
+        1.8
+      ],
+      "slider_step": 0.05,
+      "netlogo_default": 1.0
+    },
+    "adaptive_parties": {
+      "role": "constant",
+      "type": "bool",
+      "value": true,
+      "netlogo_default": true
+    },
+    "party_adaptation": {
+      "role": "default",
+      "type": "float",
+      "value": 0.25,
+      "bounds": [
+        0.0,
+        1.0
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.25
+    },
+    "persuadable_band": {
+      "role": "default",
+      "type": "float",
+      "value": 0.25,
+      "bounds": [
+        0.01,
+        1.0
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.25
+    },
+    "base_pressure": {
+      "role": "default",
+      "type": "float",
+      "value": 0.15,
+      "bounds": [
+        0.0,
+        1.0
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.15
+    },
+    "winner_base_adaptation": {
+      "role": "default",
+      "type": "float",
+      "value": 0.03,
+      "bounds": [
+        0.0,
+        0.5
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.03
+    },
+    "identity_strength": {
+      "role": "default",
+      "type": "float",
+      "value": 0.6,
+      "bounds": [
+        0.0,
+        2.0
+      ],
+      "slider_step": 0.02,
+      "netlogo_default": 0.6
+    },
+    "identity_reinforcement": {
+      "role": "default",
+      "type": "float",
+      "value": 0.03,
+      "bounds": [
+        0.0,
+        0.25
+      ],
+      "slider_step": 0.005,
+      "netlogo_default": 0.03
+    },
+    "base_turnout": {
+      "role": "default",
+      "type": "float",
+      "value": 0.55,
+      "bounds": [
+        0.0,
+        1.0
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.55
+    },
+    "turnout_sensitivity": {
+      "role": "default",
+      "type": "float",
+      "value": 0.12,
+      "bounds": [
+        0.0,
+        0.5
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.12
+    },
+    "election_noise": {
+      "role": "default",
+      "type": "float",
+      "value": 0.08,
+      "bounds": [
+        0.0,
+        0.5
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.08
+    },
+    "social_network": {
+      "role": "constant",
+      "type": "bool",
+      "value": true,
+      "netlogo_default": false
+    },
+    "network_degree": {
+      "role": "constant",
+      "type": "int",
+      "value": 6,
+      "bounds": [
+        0,
+        20
+      ],
+      "slider_step": 1,
+      "netlogo_default": 6
+    },
+    "homophily": {
+      "role": "swept",
+      "type": "float",
+      "sweep": {
+        "enumerated": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ]
+      },
+      "values": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "n": 5,
+      "bounds": [
+        0.0,
+        1.0
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.7
+    },
+    "social_influence": {
+      "role": "swept",
+      "type": "float",
+      "sweep": {
+        "enumerated": [
+          0.0,
+          0.05,
+          0.1,
+          0.2,
+          0.4
+        ]
+      },
+      "values": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "n": 5,
+      "bounds": [
+        0.0,
+        0.5
+      ],
+      "slider_step": 0.01,
+      "netlogo_default": 0.08
+    },
+    "opinion_drift": {
+      "role": "default",
+      "type": "float",
+      "value": 0.01,
+      "bounds": [
+        0.0,
+        0.1
+      ],
+      "slider_step": 0.002,
+      "netlogo_default": 0.01
+    },
+    "production_system": {
+      "role": "constant",
+      "type": "bool",
+      "value": false,
+      "netlogo_default": false
+    },
+    "rule_policy": {
+      "role": "default",
+      "type": "bool",
+      "value": true,
+      "netlogo_default": true
+    },
+    "rule_identity": {
+      "role": "default",
+      "type": "bool",
+      "value": true,
+      "netlogo_default": true
+    },
+    "rule_habit": {
+      "role": "default",
+      "type": "bool",
+      "value": true,
+      "netlogo_default": true
+    },
+    "rule_neighbors": {
+      "role": "default",
+      "type": "bool",
+      "value": true,
+      "netlogo_default": true
+    },
+    "rule_engagement": {
+      "role": "default",
+      "type": "bool",
+      "value": true,
+      "netlogo_default": true
+    },
+    "rule_indifference": {
+      "role": "default",
+      "type": "bool",
+      "value": true,
+      "netlogo_default": true
+    },
+    "rule_alienation": {
+      "role": "default",
+      "type": "bool",
+      "value": true,
+      "netlogo_default": true
+    },
+    "rule_cross_pressure": {
+      "role": "default",
+      "type": "bool",
+      "value": true,
+      "netlogo_default": true
+    }
+  },
+  "output_dir": "experiments/202608071014_network_sweep",
+  "renamed_from": null,
+  "environment": {
+    "python": "3.12.7",
+    "numpy": "1.26.4",
+    "platform": "darwin",
+    "machine": "arm64",
+    "jobs": 12
+  }
+}

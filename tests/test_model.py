@@ -7,6 +7,8 @@ you which equation drifted rather than only that something changed.
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pytest
 
@@ -349,6 +351,43 @@ def test_export_writes_the_file(tmp_path):
 
     assert model.history.export_tsv(path) == 3
     assert path.read_text().splitlines()[0].startswith("election\twinner")
+
+
+def test_history_records_the_shape_of_the_electorate_not_only_its_mean(tmp_path):
+    """Both electorate shapes are symmetric, so the mean alone cannot show where
+    the voters are.  The added fields are what the dynamics plots read."""
+    model = Model(Params(population=400), seed=11).run(5)
+    record = model.history[-1]
+
+    assert record.ideology_p10 <= record.ideology_p50 <= record.ideology_p90
+    assert record.ideology_sd > 0
+    assert abs(record.ideology_p50 - np.median(model.ideology)) < 1e-12
+    assert abs(record.ideology_sd - float(model.ideology.std())) < 1e-12
+    assert abs(record.mean_identity - float(model.party_identity.mean())) < 1e-12
+
+
+def test_history_records_each_party_coalition_centre():
+    """Party adaptation chases its own voters, so their centre is the thing to
+    plot the party position against."""
+    model = Model(Params(population=400, electorate_shape="two-camp"), seed=12).run(5)
+    record = model.history[-1]
+
+    blue = model.ideology[model.vote_choice == -1]
+    red = model.ideology[model.vote_choice == 1]
+    assert abs(record.blue_voter_ideology - float(blue.mean())) < 1e-12
+    assert abs(record.red_voter_ideology - float(red.mean())) < 1e-12
+    assert record.blue_voter_ideology < record.red_voter_ideology
+
+
+def test_a_party_with_no_votes_records_nan_rather_than_zero():
+    """Zero would plot as 'the centre', which is the one place they are not."""
+    model = Model(Params(population=200), seed=13)
+    model.step()
+    model.vote_choice[:] = 1  # everyone voted Red
+    model.record_history()
+
+    assert math.isnan(model.history[-1].blue_voter_ideology)
+    assert not math.isnan(model.history[-1].red_voter_ideology)
 
 
 def test_netlogo_precision_rounds_half_away_from_zero():

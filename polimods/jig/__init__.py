@@ -2,19 +2,22 @@
 
 A replacement for NetLogo's BehaviorSpace that runs from a TOML spec, parallelizes
 across processes, seeds every run deterministically, and writes a self-describing
-results folder.
+stamped folder under ``experiments/`` holding the spec, the manifest and the output.
 
     from polimods.jig import ExperimentSpec, run_experiment
 
-    spec = ExperimentSpec.from_file("experiments/parity_sweep.toml")
+    spec = ExperimentSpec.from_file("experiments/202608071014_parity_sweep/parity_sweep.toml")
     manifest = run_experiment(spec, jobs=8)
 """
 
 from .manifest import build_manifest, finalize_manifest, read_manifest, write_manifest
 from .runner import (
+    DATED_FOLDER,
     DEFAULT_JOBS,
     RUNS_CSV,
     STEPS_CSV,
+    dated_name,
+    default_experiments_root,
     execute_run,
     resolve_output_dir,
     run_experiment,
@@ -23,6 +26,7 @@ from .spec import ExperimentSpec, Run, SpecError, Sweep, derive_seed
 from .summarize import Summary, format_table, load_runs, plot, summarize
 
 __all__ = [
+    "DATED_FOLDER",
     "DEFAULT_JOBS",
     "ExperimentSpec",
     "RUNS_CSV",
@@ -32,6 +36,8 @@ __all__ = [
     "Summary",
     "Sweep",
     "build_manifest",
+    "dated_name",
+    "default_experiments_root",
     "derive_seed",
     "execute_run",
     "finalize_manifest",

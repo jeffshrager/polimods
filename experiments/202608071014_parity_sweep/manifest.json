@@ -1,9 +1,9 @@
 {
-  "experiment": "rule_ablation",
-  "description": "Full factorial over the eight voter production rules",
-  "spec_file": "experiments/rule_ablation.toml",
-  "created": "2026-08-07T17:14:51Z",
-  "completed": "2026-08-07T17:14:55Z",
+  "experiment": "parity_sweep",
+  "description": "Does losing-party adaptation generate parity, and does base pressure prevent it?",
+  "spec_file": "experiments/202608071014_parity_sweep/parity_sweep.toml",
+  "created": "2026-08-07T17:14:48Z",
+  "completed": "2026-08-07T17:14:49Z",
   "status": "complete",
   "git_commit": "1fe9762",
   "git_dirty": false,
@@ -11,33 +11,27 @@
   "repetitions": 10,
   "steps": 100,
   "run_metrics_every_step": false,
-  "conditions": 256,
-  "total_runs": 2560,
-  "runs_completed": 2560,
-  "wall_seconds": 4.63,
+  "conditions": 30,
+  "total_runs": 300,
+  "runs_completed": 300,
+  "wall_seconds": 1.12,
   "metrics": [
     "mean_margin",
     "control_change_rate",
     "party_gap",
-    "turnout_rate",
-    "switch_rate",
-    "mean_voter_ideology"
+    "blue_position",
+    "red_position",
+    "turnout_rate"
   ],
   "sweep_variables": [
-    "rule_policy",
-    "rule_identity",
-    "rule_habit",
-    "rule_neighbors",
-    "rule_engagement",
-    "rule_indifference",
-    "rule_alienation",
-    "rule_cross_pressure"
+    "party_adaptation",
+    "base_pressure"
   ],
   "variables": {
     "electorate_shape": {
-      "role": "constant",
+      "role": "default",
       "type": "str",
-      "value": "two-camp",
+      "value": "single-peaked",
       "netlogo_default": "single-peaked"
     },
     "population": {
@@ -102,9 +96,22 @@
       "netlogo_default": true
     },
     "party_adaptation": {
-      "role": "default",
+      "role": "swept",
       "type": "float",
-      "value": 0.25,
+      "sweep": {
+        "first": 0.0,
+        "step": 0.1,
+        "last": 0.5
+      },
+      "values": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5
+      ],
+      "n": 6,
       "bounds": [
         0.0,
         1.0
@@ -124,9 +131,25 @@
       "netlogo_default": 0.25
     },
     "base_pressure": {
-      "role": "default",
+      "role": "swept",
       "type": "float",
-      "value": 0.15,
+      "sweep": {
+        "enumerated": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ]
+      },
+      "values": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "n": 5,
       "bounds": [
         0.0,
         1.0
@@ -203,11 +226,11 @@
     "social_network": {
       "role": "constant",
       "type": "bool",
-      "value": true,
+      "value": false,
       "netlogo_default": false
     },
     "network_degree": {
-      "role": "constant",
+      "role": "default",
       "type": "int",
       "value": 6,
       "bounds": [
@@ -253,139 +276,59 @@
     "production_system": {
       "role": "constant",
       "type": "bool",
-      "value": true,
+      "value": false,
       "netlogo_default": false
     },
     "rule_policy": {
-      "role": "swept",
+      "role": "default",
       "type": "bool",
-      "sweep": {
-        "enumerated": [
-          true,
-          false
-        ]
-      },
-      "values": [
-        true,
-        false
-      ],
-      "n": 2,
+      "value": true,
       "netlogo_default": true
     },
     "rule_identity": {
-      "role": "swept",
+      "role": "default",
       "type": "bool",
-      "sweep": {
-        "enumerated": [
-          true,
-          false
-        ]
-      },
-      "values": [
-        true,
-        false
-      ],
-      "n": 2,
+      "value": true,
       "netlogo_default": true
     },
     "rule_habit": {
-      "role": "swept",
+      "role": "default",
       "type": "bool",
-      "sweep": {
-        "enumerated": [
-          true,
-          false
-        ]
-      },
-      "values": [
-        true,
-        false
-      ],
-      "n": 2,
+      "value": true,
       "netlogo_default": true
     },
     "rule_neighbors": {
-      "role": "swept",
+      "role": "default",
       "type": "bool",
-      "sweep": {
-        "enumerated": [
-          true,
-          false
-        ]
-      },
-      "values": [
-        true,
-        false
-      ],
-      "n": 2,
+      "value": true,
       "netlogo_default": true
     },
     "rule_engagement": {
-      "role": "swept",
+      "role": "default",
       "type": "bool",
-      "sweep": {
-        "enumerated": [
-          true,
-          false
-        ]
-      },
-      "values": [
-        true,
-        false
-      ],
-      "n": 2,
+      "value": true,
       "netlogo_default": true
     },
     "rule_indifference": {
-      "role": "swept",
+      "role": "default",
       "type": "bool",
-      "sweep": {
-        "enumerated": [
-          true,
-          false
-        ]
-      },
-      "values": [
-        true,
-        false
-      ],
-      "n": 2,
+      "value": true,
       "netlogo_default": true
     },
     "rule_alienation": {
-      "role": "swept",
+      "role": "default",
       "type": "bool",
-      "sweep": {
-        "enumerated": [
-          true,
-          false
-        ]
-      },
-      "values": [
-        true,
-        false
-      ],
-      "n": 2,
+      "value": true,
       "netlogo_default": true
     },
     "rule_cross_pressure": {
-      "role": "swept",
+      "role": "default",
       "type": "bool",
-      "sweep": {
-        "enumerated": [
-          true,
-          false
-        ]
-      },
-      "values": [
-        true,
-        false
-      ],
-      "n": 2,
+      "value": true,
       "netlogo_default": true
     }
   },
-  "output_dir": "/Users/leo/Desktop/Projects/polimods/results/rule_ablation",
+  "output_dir": "experiments/202608071014_parity_sweep",
   "renamed_from": null,
   "environment": {
     "python": "3.12.7",

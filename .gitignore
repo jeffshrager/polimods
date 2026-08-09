@@ -7,8 +7,11 @@ dist/
 .venv/
 venv/
 
+.DS_Store
+
 # Per-election output can reach hundreds of MB and is regenerable from the
-# manifest.  manifest.json and runs.csv are committed: the manifest is the record
-# of what was run, and it is worth little without the results it describes.
-results/**/steps.csv
-results/**/*.png
+# manifest.  The spec, manifest.json and runs.csv are committed: together they
+# are the record of what was run, and the manifest is worth little without the
+# results it describes.
+experiments/**/steps.csv
+experiments/**/*.png

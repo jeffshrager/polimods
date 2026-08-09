@@ -1,12 +1,17 @@
 """Experiment specifications: the jig's equivalent of a BehaviorSpace experiment.
 
-A spec is a TOML file naming the parameters to hold constant, the parameters to
-sweep, how many repetitions to run per condition, and which metrics to record.
-Reading it expands to a fully enumerated list of runs, each with a deterministic
-seed, *before* anything executes -- so a bad value fails the whole experiment
-immediately rather than 200 runs in.
+A spec is a TOML file naming the experiment, saying what it is for, and listing
+the parameters to hold constant, the parameters to sweep, how many repetitions to
+run per condition, and which metrics to record.  Reading it expands to a fully
+enumerated list of runs, each with a deterministic seed, *before* anything
+executes -- so a bad value fails the whole experiment immediately rather than 200
+runs in.
 
-    name = "parity_sweep"
+    expname = "parity_sweep"        # short label; also names the output folder
+    expdescr = '''                  # what the experiment is for, at any length
+    Does losing-party adaptation generate parity?
+    ...
+    '''
     repetitions = 10
     steps = 100
     metrics = ["mean_margin", "control_change_rate"]
@@ -22,6 +27,7 @@ immediately rather than 200 runs in.
 from __future__ import annotations
 
 import itertools
+import re
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,8 +40,8 @@ from ..params import Params
 
 #: Keys allowed at the top level of a spec file.
 TOP_LEVEL_KEYS = {
-    "name",
-    "description",
+    "expname",
+    "expdescr",
     "repetitions",
     "steps",
     "metrics",
@@ -45,11 +51,32 @@ TOP_LEVEL_KEYS = {
     "sweep",
 }
 
+#: Earlier spelling, still read so an old spec file does not become unrunnable.
+ALIASES = {"name": "expname", "description": "expdescr"}
+
 DEFAULT_BASE_SEED = 20260807
+
+#: What an expname may contain, since it becomes a directory name.
+_NAME = re.compile(r"[A-Za-z0-9_-]+")
 
 
 class SpecError(ValueError):
     """Raised for a malformed or invalid experiment specification."""
+
+
+def _normalize_aliases(raw: dict[str, Any]) -> dict[str, Any]:
+    """Accept the old ``name``/``description`` spelling, but never both at once."""
+    raw = dict(raw)
+    for old, new in ALIASES.items():
+        if old not in raw:
+            continue
+        if new in raw:
+            raise SpecError(
+                f"spec sets both {old!r} and {new!r}; {old!r} is the old spelling "
+                f"of {new!r}, so keep one"
+            )
+        raw[new] = raw.pop(old)
+    return raw
 
 
 @dataclass(frozen=True)
@@ -79,8 +106,14 @@ class Run:
 
 @dataclass(frozen=True)
 class ExperimentSpec:
-    name: str
-    description: str
+    #: Short label: the experiment's name everywhere, and the name of the folder
+    #: it writes into.  Kept to characters a directory name can hold.
+    expname: str
+    #: What the experiment is for, at whatever length that takes -- the question
+    #: it is asking, why these variables, what would count as an answer.  A
+    #: sweep whose point is not written down is a table nobody can interpret
+    #: later, and the manifest is where it survives.
+    expdescr: str
     repetitions: int
     steps: int
     metrics: tuple[str, ...]
@@ -106,6 +139,7 @@ class ExperimentSpec:
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any], source: Path | None = None) -> "ExperimentSpec":
+        raw = _normalize_aliases(raw)
         unknown = set(raw) - TOP_LEVEL_KEYS
         if unknown:
             raise SpecError(
@@ -113,9 +147,15 @@ class ExperimentSpec:
                 f"Expected one of {', '.join(sorted(TOP_LEVEL_KEYS))}"
             )
 
-        name = raw.get("name") or (source.stem if source else None)
-        if not name:
-            raise SpecError("spec needs a 'name'")
+        expname = raw.get("expname") or (source.stem if source else None)
+        if not expname:
+            raise SpecError("spec needs an 'expname'")
+        if not _NAME.fullmatch(str(expname)):
+            # The expname becomes a directory name, so it has to be one.
+            raise SpecError(
+                f"expname {expname!r} is not usable as a folder name: use letters, "
+                "digits, '-' and '_' only"
+            )
 
         valid_params = set(Params.field_names())
 
@@ -156,8 +196,8 @@ class ExperimentSpec:
             raise SpecError("steps must be at least 1")
 
         spec = cls(
-            name=str(name),
-            description=str(raw.get("description", "")),
+            expname=str(expname),
+            expdescr=str(raw.get("expdescr", "")).strip(),
             repetitions=repetitions,
             steps=steps,
             metrics=metrics,
@@ -171,6 +211,11 @@ class ExperimentSpec:
         return spec
 
     # -- expansion ------------------------------------------------------------
+
+    @property
+    def summary(self) -> str:
+        """The first line of ``expdescr``, for places that have one row to spare."""
+        return self.expdescr.strip().splitlines()[0] if self.expdescr.strip() else ""
 
     @property
     def sweep_names(self) -> tuple[str, ...]:

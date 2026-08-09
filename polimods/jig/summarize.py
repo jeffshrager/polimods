@@ -1,7 +1,7 @@
 """Aggregate a finished sweep into per-condition statistics.
 
 Reads ``manifest.json`` to learn which columns are the sweep axes, so the usual
-call needs no arguments beyond the results folder.  Because every condition is
+call needs no arguments beyond the experiment folder.  Because every condition is
 repeated, a single run is never the unit of interpretation -- mean and interval
 across repetitions are.
 """

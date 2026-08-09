@@ -1,9 +1,9 @@
 """Command line interface for the experimental jig.
 
-    python -m polimods.jig run experiments/parity_sweep.toml --jobs 12
+    python -m polimods.jig run experiments/202608071014_parity_sweep/parity_sweep.toml
     python -m polimods.jig run experiments/parity_sweep.toml --dry-run
-    python -m polimods.jig summarize results/parity_sweep
-    python -m polimods.jig summarize results/parity_sweep --plot mean_margin
+    python -m polimods.jig summarize experiments/202608071014_parity_sweep
+    python -m polimods.jig summarize experiments/202608071014_parity_sweep --plot mean_margin
     python -m polimods.jig list
 """
 
@@ -13,8 +13,14 @@ import argparse
 import sys
 from pathlib import Path
 
-from .manifest import read_manifest
-from .runner import DEFAULT_JOBS, default_results_root, resolve_output_dir, run_experiment
+from .manifest import MANIFEST_NAME, read_manifest
+from .runner import (
+    DATED_FOLDER,
+    DEFAULT_JOBS,
+    default_experiments_root,
+    resolve_output_dir,
+    run_experiment,
+)
 from .spec import ExperimentSpec, SpecError
 from .summarize import format_table, plot, summarize
 
@@ -31,12 +37,15 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--jobs", "-j", type=int, default=DEFAULT_JOBS)
     run.add_argument("--out", type=Path, help="explicit output directory")
     run.add_argument(
-        "--results-root", type=Path, help="root for results/ (default: repo results/)"
+        "--root",
+        type=Path,
+        help="where stamped experiment folders are created "
+        "(default: the spec's own directory)",
     )
     run.add_argument(
         "--resume",
         action="store_true",
-        help="reuse the existing folder and skip runs already in runs.csv",
+        help="reuse the experiment's folder and skip runs already in runs.csv",
     )
     run.add_argument(
         "--dry-run",
@@ -46,7 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--quiet", action="store_true", help="suppress progress output")
 
     show = sub.add_parser("summarize", help="aggregate a finished sweep")
-    show.add_argument("target", help="results folder or manifest.json")
+    show.add_argument("target", help="experiment folder or manifest.json")
     show.add_argument("--by", nargs="+", help="group by these columns")
     show.add_argument("--metrics", nargs="+", help="restrict to these metrics")
     show.add_argument(
@@ -58,22 +67,21 @@ def build_parser() -> argparse.ArgumentParser:
     show.add_argument("--plot", metavar="METRIC", help="also write a PNG for METRIC")
     show.add_argument("--plot-path", type=Path, help="where to write the PNG")
 
-    listing = sub.add_parser("list", help="list available specs and past results")
+    listing = sub.add_parser("list", help="list experiment folders and loose specs")
     listing.add_argument(
         "--experiments", type=Path, help="experiments directory to scan"
     )
-    listing.add_argument("--results-root", type=Path)
 
     return parser
 
 
 def _dry_run(spec: ExperimentSpec, args) -> int:
     directory, renamed_from = resolve_output_dir(
-        spec, results_root=args.results_root, out=args.out, resume=args.resume
+        spec, root=args.root, out=args.out, resume=args.resume
     )
-    print(f"experiment      {spec.name}")
-    if spec.description:
-        print(f"description     {spec.description}")
+    print(f"experiment      {spec.expname}")
+    if spec.expdescr:
+        print(f"description     {spec.expdescr}")
     print(f"steps           {spec.steps}")
     print(f"repetitions     {spec.repetitions}")
     print(f"conditions      {spec.condition_count}")
@@ -111,7 +119,7 @@ def main(argv: list[str] | None = None) -> int:
         run_experiment(
             spec,
             jobs=args.jobs,
-            results_root=args.results_root,
+            root=args.root,
             out=args.out,
             resume=args.resume,
             progress=not args.quiet,
@@ -141,35 +149,40 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _list(args) -> int:
-    repo = Path(__file__).resolve().parents[2]
-    experiments = args.experiments or repo / "experiments"
-    results = args.results_root or default_results_root()
+    """Show what is in the experiments directory: finished folders, then specs
+    that have not been run yet."""
+    experiments = Path(args.experiments) if args.experiments else default_experiments_root()
+    if not experiments.exists():
+        print(f"(no {experiments})")
+        return 0
 
-    print("specs")
-    if experiments.exists():
-        for path in sorted(experiments.glob("*.toml")):
+    print("experiments")
+    folders = sorted(
+        p for p in experiments.iterdir() if p.is_dir() and DATED_FOLDER.match(p.name)
+    )
+    for directory in folders:
+        manifest_path = directory / MANIFEST_NAME
+        if not manifest_path.exists():
+            print(f"  {directory.name:<32} (no manifest; not run yet)")
+            continue
+        manifest = read_manifest(manifest_path)
+        print(
+            f"  {directory.name:<32} {manifest['runs_completed']}/"
+            f"{manifest['total_runs']} runs  {manifest['status']}  "
+            f"{manifest['created']}"
+        )
+    if not folders:
+        print("  (none)")
+
+    loose = sorted(experiments.glob("*.toml"))
+    if loose:
+        print("\nspecs not yet run (a run creates a stamped folder for each)")
+        for path in loose:
             try:
                 spec = ExperimentSpec.from_file(path)
-                print(f"  {path.name:<28} {spec.total_runs:>5} runs  {spec.description}")
+                print(f"  {path.name:<32} {spec.total_runs:>5} runs  {spec.summary}")
             except SpecError as error:
-                print(f"  {path.name:<28} !! {error}")
-    else:
-        print(f"  (no {experiments})")
-
-    print("\nresults")
-    if results.exists():
-        for directory in sorted(p for p in results.iterdir() if p.is_dir()):
-            manifest_path = directory / "manifest.json"
-            if not manifest_path.exists():
-                continue
-            manifest = read_manifest(manifest_path)
-            print(
-                f"  {directory.name:<28} {manifest['runs_completed']}/"
-                f"{manifest['total_runs']} runs  {manifest['status']}  "
-                f"{manifest['created']}"
-            )
-    else:
-        print(f"  (no {results})")
+                print(f"  {path.name:<32} !! {error}")
     return 0
 
 

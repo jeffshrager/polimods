@@ -1,6 +1,6 @@
 """The per-experiment ``manifest.json``.
 
-Every results folder carries one.  It records *all* model variables -- not only
+Every experiment folder carries one.  It records *all* model variables -- not only
 the swept ones -- with the role each played, so the manifest alone determines what
 was run.  A CSV without this is unfalsifiable six months later: you cannot tell
 whether a surprising number came from the mechanism you were studying or from a
@@ -101,12 +101,17 @@ def build_manifest(
     jobs: int,
     repo: Path | None = None,
     renamed_from: str | None = None,
+    spec_file: Path | None = None,
 ) -> dict[str, Any]:
     repo = repo or Path(__file__).resolve().parents[2]
+    # The spec recorded is the copy inside the output folder when there is one:
+    # that is the file this run actually used and the one that will still be
+    # there later.
+    recorded_spec = spec_file if spec_file is not None else spec.source
     return {
-        "experiment": spec.name,
-        "description": spec.description,
-        "spec_file": str(spec.source) if spec.source else None,
+        "experiment": spec.expname,
+        "description": spec.expdescr,
+        "spec_file": _relative_to(recorded_spec, repo),
         "created": _timestamp(),
         "completed": None,
         "status": "running",
@@ -122,7 +127,7 @@ def build_manifest(
         "metrics": list(spec.metrics),
         "sweep_variables": list(spec.sweep_names),
         "variables": variable_entries(spec),
-        "output_dir": str(output_dir),
+        "output_dir": _relative_to(output_dir, repo),
         "renamed_from": renamed_from,
         "environment": {
             "python": platform.python_version(),
@@ -132,6 +137,21 @@ def build_manifest(
             "jobs": jobs,
         },
     }
+
+
+def _relative_to(path: str | Path | None, repo: Path) -> str | None:
+    """Repo-relative when the path is inside the repo, absolute otherwise.
+
+    Manifests get committed and read on other machines, where an absolute path
+    to someone else's home directory says nothing.
+    """
+    if path is None:
+        return None
+    resolved = Path(path).resolve()
+    try:
+        return str(resolved.relative_to(repo.resolve()))
+    except ValueError:
+        return str(resolved)
 
 
 def write_manifest(directory: Path, manifest: dict[str, Any]) -> Path:

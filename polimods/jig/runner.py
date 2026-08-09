@@ -1,17 +1,22 @@
 """Parallel execution of an experiment spec.
 
 The jig's BehaviorSpace equivalent: expand a spec into runs, execute them across
-processes, and stream results to CSV as they land.  Results go to
-``results/<experiment>/`` alongside the manifest that describes them.
+processes, and stream results to CSV as they land.  Output goes to
+``experiments/<YYYYMMDDHHMM>_<experiment>/``, which holds the spec that produced
+it, the manifest describing it, and every file it wrote -- one stamped folder is
+the whole experiment.
 """
 
 from __future__ import annotations
 
 import csv
 import os
+import re
+import shutil
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Sequence
 
@@ -34,8 +39,23 @@ STEPS_CSV = "steps.csv"
 DEFAULT_JOBS = max(1, (os.cpu_count() or 4) - 2)
 
 
-def default_results_root() -> Path:
-    return Path(__file__).resolve().parents[2] / "results"
+#: A folder is an experiment folder when it is named ``YYYYMMDDHHMM_<something>``.
+DATED_FOLDER = re.compile(r"^\d{12}_")
+
+#: Stamps carry the minute, not just the day: several experiments a day is the
+#: normal case here, and a date alone would collide by lunchtime.  Local time,
+#: because it is read against the user's memory of when they ran things; the
+#: manifest's ``created`` field is the UTC record.
+STAMP_FORMAT = "%Y%m%d%H%M"
+
+
+def default_experiments_root() -> Path:
+    return Path(__file__).resolve().parents[2] / "experiments"
+
+
+def dated_name(name: str, on: datetime | None = None) -> str:
+    """``202608071014_parity_sweep``: the name of one experiment's folder."""
+    return f"{(on or datetime.now()).strftime(STAMP_FORMAT)}_{name}"
 
 
 # -- execution ---------------------------------------------------------------
@@ -75,32 +95,95 @@ def _worker(job: tuple[Run, int, Sequence[str], bool]):
 # -- output location ---------------------------------------------------------
 
 
+def _has_results(directory: Path) -> bool:
+    """True once a run has written here.  An empty folder holding only the spec
+    is not a previous experiment, so writing into it clobbers nothing."""
+    return (directory / MANIFEST_NAME).exists() or (directory / RUNS_CSV).exists()
+
+
+def _latest_dated(root: Path, name: str) -> Path | None:
+    """The most recent existing ``<stamp>_<name>`` folder under ``root``."""
+    if not root.exists():
+        return None
+    pattern = re.compile(rf"\d{{12}}_{re.escape(name)}(_\d+)?$")
+    matches = [p for p in root.iterdir() if p.is_dir() and pattern.match(p.name)]
+    return max(matches, key=lambda p: p.name) if matches else None
+
+
 def resolve_output_dir(
     spec: ExperimentSpec,
     *,
-    results_root: Path | None = None,
+    root: Path | None = None,
     out: Path | None = None,
     resume: bool = False,
+    now: datetime | None = None,
 ) -> tuple[Path, str | None]:
     """Pick the folder for this experiment, without ever clobbering an old one.
 
+    An experiment lives in one stamped folder, ``<root>/<YYYYMMDDHHMM>_<name>/``,
+    which holds its spec and everything the run writes.  A spec that already sits
+    in such a folder is run in place; a loose spec gets a folder stamped with the
+    current minute, and the spec is copied into it by :func:`run_experiment`.
+
     Returns ``(directory, renamed_from)``.  ``renamed_from`` is set when the
-    natural name was taken and a suffix was added, so the new manifest can say
-    what it collided with.
+    natural folder was already occupied by a finished run and a suffix was added,
+    so the new manifest can say what it collided with.
     """
     if out is not None:
         return Path(out), None
 
-    root = Path(results_root) if results_root else default_results_root()
-    directory = root / spec.name
+    source = Path(spec.source).resolve() if spec.source else None
+    if root is not None:
+        root = Path(root)
+        directory = root / dated_name(spec.expname, now)
+    elif source is not None and DATED_FOLDER.match(source.parent.name):
+        # The spec already lives in its own experiment folder: that is the folder.
+        directory = source.parent
+        root = directory.parent
+    else:
+        root = source.parent if source is not None else default_experiments_root()
+        directory = root / dated_name(spec.expname, now)
 
-    if resume or not directory.exists():
+    if resume:
+        # A resumed sweep is always older than the current stamp.
+        if not _has_results(directory):
+            existing = _latest_dated(root, spec.expname)
+            if existing is not None:
+                return existing, None
         return directory, None
 
+    if not _has_results(directory):
+        return directory, None
+
+    # The folder is taken by a finished run.  A re-run is a new experiment, so it
+    # gets its own stamp -- and a suffix if the same minute is taken too.
+    collided_with = str(directory)
+    stem = dated_name(spec.expname, now)
+    candidate = root / stem
     suffix = 2
-    while (root / f"{spec.name}_{suffix}").exists():
+    while candidate.exists():
+        candidate = root / f"{stem}_{suffix}"
         suffix += 1
-    return root / f"{spec.name}_{suffix}", str(directory)
+    return candidate, collided_with
+
+
+def _place_spec(spec: ExperimentSpec, directory: Path) -> Path | None:
+    """Ensure the spec sits in the folder it produced, and return where it landed.
+
+    A folder that carries its own spec can be re-run, diffed against a later
+    sweep, or read six months later without hunting for the file that made it.
+    An existing copy is left alone rather than overwritten: on ``--resume`` the
+    copy is what earlier runs actually used.
+    """
+    if spec.source is None:
+        return None
+    source = Path(spec.source).resolve()
+    if source.parent == directory.resolve():
+        return source
+    copy = directory / source.name
+    if not copy.exists():
+        shutil.copy2(source, copy)
+    return copy
 
 
 def _completed_run_ids(path: Path) -> set[int]:
@@ -117,16 +200,18 @@ def run_experiment(
     spec: ExperimentSpec,
     *,
     jobs: int | None = None,
-    results_root: Path | None = None,
+    root: Path | None = None,
     out: Path | None = None,
     resume: bool = False,
     progress: bool = True,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     jobs = jobs or DEFAULT_JOBS
     directory, renamed_from = resolve_output_dir(
-        spec, results_root=results_root, out=out, resume=resume
+        spec, root=root, out=out, resume=resume, now=now
     )
     directory.mkdir(parents=True, exist_ok=True)
+    spec_file = _place_spec(spec, directory)
 
     runs_path = directory / RUNS_CSV
     steps_path = directory / STEPS_CSV
@@ -143,13 +228,17 @@ def run_experiment(
         manifest["status"] = "running"
     else:
         manifest = build_manifest(
-            spec, output_dir=directory, jobs=jobs, renamed_from=renamed_from
+            spec,
+            output_dir=directory,
+            jobs=jobs,
+            renamed_from=renamed_from,
+            spec_file=spec_file,
         )
     write_manifest(directory, manifest)
 
     if progress:
         _log(
-            f"{spec.name}: {len(pending)} run(s) to execute "
+            f"{spec.expname}: {len(pending)} run(s) to execute "
             f"({spec.condition_count} conditions x {spec.repetitions} reps"
             + (f", {len(already_done)} already done" if already_done else "")
             + f") on {jobs} process(es)"
@@ -226,7 +315,7 @@ def run_experiment(
         if sys.stderr.isatty():
             sys.stderr.write("\n")
         _log(
-            f"{spec.name}: {completed}/{len(all_runs)} runs in {elapsed:.1f}s "
+            f"{spec.expname}: {completed}/{len(all_runs)} runs in {elapsed:.1f}s "
             f"-> {runs_path}"
         )
 

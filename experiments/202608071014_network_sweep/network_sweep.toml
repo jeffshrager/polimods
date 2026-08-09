@@ -11,8 +11,8 @@
 # homophily changes the network but can change nothing downstream, which makes
 # that row a built-in negative control on the rest of the sweep.
 
-name = "network_sweep"
-description = "Homophily x social influence in a two-camp electorate"
+expname = "network_sweep"
+expdescr = "Homophily x social influence in a two-camp electorate"
 repetitions = 10
 steps = 100
 base_seed = 20260807

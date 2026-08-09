@@ -14,11 +14,12 @@
 # the eight factors would be silently inert.
 #
 # Marginalize when reading the results, e.g.:
-#   python -m polimods.jig summarize results/rule_ablation --by rule_habit
-#   python -m polimods.jig summarize results/rule_ablation --by rule_policy rule_identity
+#   python -m polimods.jig summarize experiments/202608071014_rule_ablation --by rule_habit
+#   python -m polimods.jig summarize experiments/202608071014_rule_ablation \
+#       --by rule_policy rule_identity
 
-name = "rule_ablation"
-description = "Full factorial over the eight voter production rules"
+expname = "rule_ablation"
+expdescr = "Full factorial over the eight voter production rules"
 repetitions = 10
 steps = 100
 base_seed = 20260807

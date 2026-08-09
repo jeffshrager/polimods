@@ -1,0 +1,40 @@
+# Dynamics demo - a small sweep whose point is the per-election record
+#
+# The three shipped sweeps record only where each run ended up, which is all
+# their questions need. This one exists so generic_analyses/ has dynamics to
+# draw: run_metrics_every_step writes one row per election per run, and the
+# figures read that.
+#
+# party_adaptation is the sweep because it is the model's central lever, and
+# because its two ends look completely different over time: at 0 the parties sit
+# still and one of them simply wins, while at 0.4 they chase the electorate into
+# each other. Two electorate shapes are crossed in so the figures have both a
+# single-peaked and a two-camp electorate to draw.
+#
+# Small on purpose: 6 conditions x 5 repetitions x 100 elections is 3000 rows of
+# steps.csv, which is a file you can open, and the plots are indistinguishable
+# from the ones a hundred repetitions would give.
+
+expname = "dynamics_demo"
+expdescr = "Per-election dynamics under party adaptation, both electorate shapes"
+repetitions = 5
+steps = 100
+base_seed = 20260808
+run_metrics_every_step = true
+
+metrics = [
+  "mean_margin",
+  "control_change_rate",
+  "party_gap",
+  "turnout_rate",
+  "ideology_sd",
+  "mean_voter_ideology",
+]
+
+[constants]
+population = 500
+social_network = true
+
+[sweep]
+party_adaptation = [0.0, 0.15, 0.4]
+electorate_shape = ["single-peaked", "two-camp"]

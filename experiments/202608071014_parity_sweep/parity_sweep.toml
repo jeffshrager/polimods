@@ -10,8 +10,8 @@
 #
 # The social network is off so that party adaptation is the only moving part.
 
-name = "parity_sweep"
-description = "Does losing-party adaptation generate parity, and does base pressure prevent it?"
+expname = "parity_sweep"
+expdescr = "Does losing-party adaptation generate parity, and does base pressure prevent it?"
 repetitions = 10
 steps = 100
 base_seed = 20260807

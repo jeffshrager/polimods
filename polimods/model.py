@@ -366,6 +366,14 @@ class Model:
         self.mean_voter_ideology = float(self.ideology.mean())
 
     def record_history(self) -> None:
+        # Like mean_ideology, the distribution fields describe the electorate as
+        # it stands at the end of the election -- after update_voter_states has
+        # moved everyone -- split by how they voted during it.
+        p10, p50, p90 = (
+            np.percentile(self.ideology, (10, 50, 90))
+            if len(self.ideology)
+            else (0.0, 0.0, 0.0)
+        )
         self.history.append(
             ElectionRecord(
                 election=self.ticks + 1,
@@ -379,8 +387,22 @@ class Model:
                 party_gap=self.party_gap,
                 mean_ideology=self.mean_voter_ideology,
                 switch_rate=self.switch_rate,
+                ideology_sd=self.ideology_sd,
+                ideology_p10=float(p10),
+                ideology_p50=float(p50),
+                ideology_p90=float(p90),
+                blue_voter_ideology=self._camp_mean(-1),
+                red_voter_ideology=self._camp_mean(1),
+                mean_identity=(
+                    float(self.party_identity.mean()) if len(self.party_identity) else 0.0
+                ),
             )
         )
+
+    def _camp_mean(self, choice: int) -> float:
+        """Mean ideology of the voters who chose ``choice``; NaN if there are none."""
+        voters = self.vote_choice == choice
+        return float(self.ideology[voters].mean()) if voters.any() else float("nan")
 
     # -- network and manual controls -----------------------------------------
 

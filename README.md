@@ -70,14 +70,14 @@ produced, and every model validates its parameters on construction.
 
 The jig is a scriptable replacement for BehaviorSpace. An experiment is a TOML
 file; running it fans out across processes, seeds every run deterministically,
-and writes a self-describing results folder.
+and writes a self-describing timestamped folder next to the spec.
 
 ```bash
-python -m polimods.jig list                                    # specs and past results
-python -m polimods.jig run experiments/parity_sweep.toml --dry-run
-python -m polimods.jig run experiments/parity_sweep.toml --jobs 12
-python -m polimods.jig summarize results/parity_sweep
-python -m polimods.jig summarize results/parity_sweep --plot mean_margin
+python -m polimods.jig list                                    # every experiment
+python -m polimods.jig run experiments/202608071014_parity_sweep/parity_sweep.toml --dry-run
+python -m polimods.jig run experiments/202608071014_parity_sweep/parity_sweep.toml --jobs 12
+python -m polimods.jig summarize experiments/202608071014_parity_sweep
+python -m polimods.jig summarize experiments/202608071014_parity_sweep --plot mean_margin
 ```
 
 An experiment spec mirrors BehaviorSpace's vocabulary:
@@ -102,23 +102,46 @@ Sweep values are validated against the NetLogo slider ranges before the first ru
 starts, so a typo fails the experiment immediately rather than 200 runs in.
 
 Useful flags: `--jobs` (default: cores − 2), `--resume` (skip runs already in
-`runs.csv`), `--dry-run`, `--out`, `--quiet`.
+`runs.csv`), `--dry-run`, `--root`, `--out`, `--quiet`.
 
-## Results layout
+## Experiment layout
 
-Every experiment gets its own folder under `results/`:
+One experiment is one timestamped folder under `experiments/`, named
+`YYYYMMDDHHMM_<name>` and holding the spec that produced it plus everything the
+run wrote:
 
 ```
-results/
-  parity_sweep/
+experiments/
+  202608071014_parity_sweep/
+    parity_sweep.toml # the spec this folder was produced by
     manifest.json     # what was run: every variable, its setting, its sweep range
     runs.csv          # one row per run: condition + final metrics
     steps.csv         # one row per election (only if run_metrics_every_step)
+    mean_margin.png   # whatever `summarize --plot` wrote
 ```
 
-Re-running an experiment never overwrites an old folder — the runner suffixes the
-name (`parity_sweep_2`) and records the collision in the new manifest. Use
-`--resume` to continue into an existing folder instead.
+The spec lives inside the folder so the folder answers its own questions later: a
+`runs.csv` you cannot tie to a spec is a table of numbers with no design behind
+it. There are two ways to start an experiment, and both end up here:
+
+```bash
+mkdir experiments/202608091821_network_scan      # write the spec where it belongs
+$EDITOR experiments/202608091821_network_scan/network_scan.toml
+python -m polimods.jig run experiments/202608091821_network_scan/network_scan.toml
+
+python -m polimods.jig run experiments/network_scan.toml   # or drop a loose spec:
+                                             # a stamped folder is created for it
+```
+
+A spec already inside a stamped folder is run in place. A loose spec gets
+`experiments/<stamp>_<name>/` and is copied into it. The stamp carries the minute
+because several experiments a day is the normal case here; it is local time,
+while the manifest's `created` field is the UTC record.
+
+Re-running an experiment never overwrites finished results — the run goes to a
+folder carrying its own stamp (and a `_2` suffix if the same minute is taken
+too), and the new manifest records what it collided with. Use `--resume` to
+continue into the existing folder instead.
 
 `manifest.json` describes **all** model variables, not only the swept ones, each
 tagged with the role it played:
@@ -139,18 +162,35 @@ tagged with the role it played:
 manifest also records the git commit, base seed, run count, wall time, and
 library versions — enough to reconstruct the experiment from the folder alone.
 
+## Generic figures
+
+`generic_analyses/` draws the same four figures for any experiment folder: where
+the parties are against where the voters are, how the competition went, whether
+either converged, and the first of those repeated across the sweep's conditions.
+
+```bash
+python -m generic_analyses experiments/202608081234_dynamics_demo
+python -m generic_analyses <folder> --condition 5 --theme dark
+```
+
+It reads `steps.csv`, so the spec must set `run_metrics_every_step = true`; PNGs
+are written into the experiment folder. See
+[`generic_analyses/README.md`](generic_analyses/README.md).
+
 ## Included experiments
 
-| Spec | Runs | Question |
+| Experiment | Runs | Question |
 |---|---:|---|
-| `experiments/parity_sweep.toml` | 300 | Does losing-party adaptation generate parity, and does base pressure prevent it? |
-| `experiments/network_sweep.toml` | 250 | How do homophily and social influence interact in a two-camp electorate? |
-| `experiments/rule_ablation.toml` | 2560 | What does each of the eight production rules contribute? |
+| `experiments/202608071014_parity_sweep/` | 300 | Does losing-party adaptation generate parity, and does base pressure prevent it? |
+| `experiments/202608071014_network_sweep/` | 250 | How do homophily and social influence interact in a two-camp electorate? |
+| `experiments/202608071014_rule_ablation/` | 2560 | What does each of the eight production rules contribute? |
+| `experiments/202608081234_dynamics_demo/` | 30 | What do the dynamics look like, election by election? |
 
 The first two are ports of the BehaviorSpace experiments included in the
 `.nlogo` files. The third is new: the NetLogo ships the production system but no
 experiment that exercises it, because crossing eight switches by hand is not
-something anyone does 256 times.
+something anyone does 256 times. The fourth is small and exists for its
+per-election output, which is what `generic_analyses/` draws.
 
 ## Tests
 
@@ -542,3 +582,11 @@ The NetLogo source is organized into named procedures corresponding to the conce
 - `record-history` and `export-history`
 
 The source file is intentionally heavily commented so it can be read as a teaching text as well as executed as a model.
+
+# Session summaries
+
+`seshsums/` holds one file per working session, `YYYYMMDDHHMM_seshsum.md`,
+recording what was built, what was decided and why, and the model behaviours that
+would otherwise be rediscovered the hard way. Same stamp convention as the
+experiment folders, and for the same reason: several a day, so the minute is part
+of the name.

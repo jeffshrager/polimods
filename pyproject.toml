@@ -20,7 +20,7 @@ polimods = "polimods.cli:main"
 polimods-jig = "polimods.jig.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["polimods*"]
+include = ["polimods*", "generic_analyses*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

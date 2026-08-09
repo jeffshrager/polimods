@@ -1,38 +1,47 @@
 {
-  "experiment": "network_sweep",
-  "description": "Homophily x social influence in a two-camp electorate",
-  "spec_file": "experiments/network_sweep.toml",
-  "created": "2026-08-07T17:14:49Z",
-  "completed": "2026-08-07T17:14:50Z",
+  "experiment": "dynamics_demo",
+  "description": "Per-election dynamics under party adaptation, both electorate shapes",
+  "spec_file": "experiments/202608081234_dynamics_demo/dynamics_demo.toml",
+  "created": "2026-08-08T19:38:28Z",
+  "completed": "2026-08-08T19:38:29Z",
   "status": "complete",
-  "git_commit": "1fe9762",
-  "git_dirty": false,
-  "base_seed": 20260807,
-  "repetitions": 10,
+  "git_commit": "ab07e95",
+  "git_dirty": true,
+  "base_seed": 20260808,
+  "repetitions": 5,
   "steps": 100,
-  "run_metrics_every_step": false,
-  "conditions": 25,
-  "total_runs": 250,
-  "runs_completed": 250,
-  "wall_seconds": 1.05,
+  "run_metrics_every_step": true,
+  "conditions": 6,
+  "total_runs": 30,
+  "runs_completed": 30,
+  "wall_seconds": 0.63,
   "metrics": [
     "mean_margin",
     "control_change_rate",
     "party_gap",
-    "mean_voter_ideology",
-    "switch_rate",
+    "turnout_rate",
     "ideology_sd",
-    "mean_degree"
+    "mean_voter_ideology"
   ],
   "sweep_variables": [
-    "homophily",
-    "social_influence"
+    "party_adaptation",
+    "electorate_shape"
   ],
   "variables": {
     "electorate_shape": {
-      "role": "constant",
+      "role": "swept",
       "type": "str",
-      "value": "two-camp",
+      "sweep": {
+        "enumerated": [
+          "single-peaked",
+          "two-camp"
+        ]
+      },
+      "values": [
+        "single-peaked",
+        "two-camp"
+      ],
+      "n": 2,
       "netlogo_default": "single-peaked"
     },
     "population": {
@@ -91,15 +100,27 @@
       "netlogo_default": 1.0
     },
     "adaptive_parties": {
-      "role": "constant",
+      "role": "default",
       "type": "bool",
       "value": true,
       "netlogo_default": true
     },
     "party_adaptation": {
-      "role": "default",
+      "role": "swept",
       "type": "float",
-      "value": 0.25,
+      "sweep": {
+        "enumerated": [
+          0.0,
+          0.15,
+          0.4
+        ]
+      },
+      "values": [
+        0.0,
+        0.15,
+        0.4
+      ],
+      "n": 3,
       "bounds": [
         0.0,
         1.0
@@ -202,7 +223,7 @@
       "netlogo_default": false
     },
     "network_degree": {
-      "role": "constant",
+      "role": "default",
       "type": "int",
       "value": 6,
       "bounds": [
@@ -213,25 +234,9 @@
       "netlogo_default": 6
     },
     "homophily": {
-      "role": "swept",
+      "role": "default",
       "type": "float",
-      "sweep": {
-        "enumerated": [
-          0.0,
-          0.25,
-          0.5,
-          0.75,
-          1.0
-        ]
-      },
-      "values": [
-        0.0,
-        0.25,
-        0.5,
-        0.75,
-        1.0
-      ],
-      "n": 5,
+      "value": 0.7,
       "bounds": [
         0.0,
         1.0
@@ -240,25 +245,9 @@
       "netlogo_default": 0.7
     },
     "social_influence": {
-      "role": "swept",
+      "role": "default",
       "type": "float",
-      "sweep": {
-        "enumerated": [
-          0.0,
-          0.05,
-          0.1,
-          0.2,
-          0.4
-        ]
-      },
-      "values": [
-        0.0,
-        0.05,
-        0.1,
-        0.2,
-        0.4
-      ],
-      "n": 5,
+      "value": 0.08,
       "bounds": [
         0.0,
         0.5
@@ -278,7 +267,7 @@
       "netlogo_default": 0.01
     },
     "production_system": {
-      "role": "constant",
+      "role": "default",
       "type": "bool",
       "value": false,
       "netlogo_default": false
@@ -332,13 +321,13 @@
       "netlogo_default": true
     }
   },
-  "output_dir": "/Users/leo/Desktop/Projects/polimods/results/network_sweep",
+  "output_dir": "experiments/202608081234_dynamics_demo",
   "renamed_from": null,
   "environment": {
     "python": "3.12.7",
     "numpy": "1.26.4",
     "platform": "darwin",
     "machine": "arm64",
-    "jobs": 12
+    "jobs": 6
   }
 }

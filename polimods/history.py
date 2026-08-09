@@ -30,7 +30,18 @@ HEADER = "\t".join(name for name, _attr, _p in COLUMNS)
 
 @dataclass
 class ElectionRecord:
-    """One completed election, at full floating-point precision."""
+    """One completed election, at full floating-point precision.
+
+    The first eleven fields are the ones NetLogo exports, in its order.  The rest
+    describe *where the electorate is*, which the NetLogo record cannot show: it
+    carries the electorate's mean, and both shipped electorate shapes are
+    symmetric, so the mean sits near zero however far the voters have moved.
+    Spread, quantiles and the two camps' centres are what actually move, and
+    without them a plot of party positions has nothing to be plotted against.
+
+    They are appended rather than interleaved, and ``COLUMNS`` is untouched, so
+    the TSV export stays byte-compatible with NetLogo's.
+    """
 
     election: int
     winner: str
@@ -43,6 +54,20 @@ class ElectionRecord:
     party_gap: float
     mean_ideology: float
     switch_rate: float
+
+    #: Dispersion of the whole electorate.
+    ideology_sd: float = 0.0
+    #: The electorate's shape: the 10th, 50th and 90th percentile voter.
+    ideology_p10: float = 0.0
+    ideology_p50: float = 0.0
+    ideology_p90: float = 0.0
+    #: Mean ideology of the voters who cast a ballot for each party this
+    #: election -- the centre of each party's actual coalition, which is what
+    #: party adaptation is chasing.  NaN when a party drew no votes.
+    blue_voter_ideology: float = float("nan")
+    red_voter_ideology: float = float("nan")
+    #: Mean partisan identity, signed like a vote: -1 is wholly Blue, +1 Red.
+    mean_identity: float = 0.0
 
     def as_dict(self) -> dict[str, object]:
         return asdict(self)
