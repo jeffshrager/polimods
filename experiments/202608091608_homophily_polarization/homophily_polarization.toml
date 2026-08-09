@@ -1,0 +1,48 @@
+# Network homophily and polarization
+#
+# Potential Experiment 6 from the README: "Homophily's bite depends on
+# electorate shape." The shipped network_sweep experiment only ever runs a
+# two-camp electorate, because homophily amplifying an already-bimodal
+# distribution is the obvious story. This spec crosses electorate_shape itself
+# into the sweep to ask the sharper question: can homophily *manufacture*
+# camps out of a single-peaked (unimodal) starting distribution given enough
+# elections, or does it only sharpen polarization that is already there?
+#
+# ideology_sd is the metric that answers this: if homophily can manufacture
+# polarization from single-peaked, ideology_sd should fail to collapse the way
+# it does in the two-camp condition even as social_influence rises, or should
+# behave qualitatively differently across electorate_shape. mean_voter_ideology
+# is included but is expected to stay near zero in both shapes by symmetry, as
+# noted for network_sweep in seshsums/202608071041_seshsum.md.
+#
+# social_influence = 0 is included deliberately as a negative control: with no
+# persuasion, homophily can change the network but nothing downstream.
+
+expname = "homophily_polarization"
+expdescr = "Homophily x social influence x electorate shape: can homophily manufacture camps, not just sharpen them?"
+repetitions = 10
+steps = 100
+base_seed = 20260809
+run_metrics_every_step = true   # needed for generic_analyses and the manufacture-vs-sharpen analysis
+
+metrics = [
+  "mean_margin",
+  "control_change_rate",
+  "party_gap",
+  "mean_voter_ideology",
+  "switch_rate",
+  "ideology_sd",
+  "mean_degree",
+]
+
+[constants]
+social_network = true
+adaptive_parties = true
+production_system = false
+population = 500
+network_degree = 6
+
+[sweep]
+electorate_shape = ["single-peaked", "two-camp"]
+homophily = [0.0, 0.25, 0.5, 0.75, 1.0]
+social_influence = [0.0, 0.05, 0.1, 0.2, 0.4]
